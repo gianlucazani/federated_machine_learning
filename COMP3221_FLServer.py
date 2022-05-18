@@ -1,15 +1,14 @@
-HOST = "127.0.0.1"
+import sys
 
 
-class Client:
-    def __init__(self, id, port_no, server_port_no):
-        self.id = id
-        self.port_no = port_no
-        self.server_port_no = server_port_no
+class Server:
+    def __init__(self):
+        self.port_no = sys.argv[1]  # fixed to 6000
+        self.subsample_clients = sys.argv[2]  # 0 for use all the clients' weights, 1 use only 2 chosen randomly
 
     def run(self):
         pass
 
 
-client = Client()
-client.run()
+server = Server()
+server.run()
