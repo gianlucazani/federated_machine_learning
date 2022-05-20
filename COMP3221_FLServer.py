@@ -7,6 +7,7 @@ class Server:
         self.subsample_clients = sys.argv[2]  # 0 for use all the clients' weights, 1 use only 2 chosen randomly
 
     def run(self):
+
         start_wss_thread = threading.Thread(target=self.start_websocket_server)
         start_wss_thread.start()
     
