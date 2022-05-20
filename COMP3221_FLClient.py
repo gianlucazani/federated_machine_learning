@@ -6,8 +6,8 @@ import socket
 import threading
 import _pickle
 
-HOST = "127.0.0.1"
-
+CLIENT_HOST = "127.0.0.1"
+SERVER_HOST = "127.0.0.1"
 
 class Client:
     def __init__(self):
@@ -19,22 +19,22 @@ class Client:
         self.Y_train = []
         self.X_test = []
         self.Y_test = []
-        self.log_file = os.path.join("./","logs", "client"+str(self.id)+"_log.txt")
+        self.log_file = os.path.join("./","client"+str(self.id)+"_log.txt")
         print(self.log_file)
         self.read_dataset()
         self.server =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((HOST, int(self.port_no)))
+        self.server.bind((CLIENT_HOST, int(self.port_no)))
         handshake_thread = threading.Thread(target=self.handshake())
         handshake_thread.start()
 
     def run(self):
         self.server.listen()
         while True:
-            with open(self.log_file, 'w') as f:
+            with open(self.log_file, 'w+') as f:
                 f.write(f'I am client {self.id}')
                 conn, addr = self.server.accept()
                 f.write(f'Receving new global model')
-                msg = _pickle.loads(conn.recv(4096))
+                msg = _pickle.loads(conn.recv(65536))
                 W = msg['W']
                 training_loss = self.softmax_loss(self.X_train, self.Y_train, W)
                 f.write(f'Training loss: {training_loss}')
@@ -53,14 +53,17 @@ class Client:
 
     def handshake(self):
         try: 
+            print("trying handshake")
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, self.server_port_no))
+                s.connect((SERVER_HOST, self.server_port_no))
                 packet = {
                     'id': int(self.id),
-                    'port': int(self.port_no)
+                    'port': int(self.port_no),
+                    'datasize': self.X_train.shape[1]
                 }
                 s.sendall(_pickle.dumps(packet))
         except:
+            print("couldnt connect to host")
             pass
 
     def read_dataset(self):
@@ -75,6 +78,10 @@ class Client:
             test = json.load(f_test)
             test_data.update(test['user_data']) 
         self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0']['y']
+        self.X_train = np.array(self.X_train)
+        self.Y_train = np.array(self.Y_train)
+        self.X_test = np.array(self.X_test)
+        self.Y_test = np.array(self.Y_test)
         self.X_train = np.concatenate((self.X_train, np.ones((self.X_train.shape[0], 1))), axis = 1)
         self.X_test = np.concatenate((self.X_test, np.ones((self.X_test.shape[0], 1))), axis = 1)
 
@@ -86,7 +93,9 @@ class Client:
     
     def softmax_loss(self, X, y, W):
         A = self.softmax(X,W)
+        print(A.shape)
         id0 = range(X.shape[0])
+        print(id0)
         return -np.mean(np.log(A[id0, y]))
 
     def softmax_grad(self, X, y, W):

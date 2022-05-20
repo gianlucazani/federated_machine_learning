@@ -6,8 +6,8 @@ import time
 
 import numpy as np
 
-HOST = "127.0.0.1"
-CLIENT_HOST = "172.20.10.6"
+SERVER_HOST = "127.0.0.1"
+CLIENT_HOST = "127.0.0.1"
 
 
 class HandshakeThread(threading.Thread):
@@ -40,7 +40,7 @@ class Server:
         handshake_thread = HandshakeThread(self)
         self.server_socket.listen()
         conn, addr = self.server_socket.accept()
-        received = conn.recv(131072)
+        received = conn.recv(65536)
         client = _pickle.loads(received)
         self.clients.update(client)
         print("first client connected!!")
