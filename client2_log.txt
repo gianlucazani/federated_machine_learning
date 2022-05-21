@@ -5,246 +5,271 @@ Testing accuracy: 0.12099276111685625
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 17.29841136736803 
-Testing accuracy: 0.19958634953464321 
+Training loss: inf 
+Testing accuracy: 0.3340227507755946 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 7.047885598484843 
-Testing accuracy: 0.3216132368148914 
+Training loss: 13.22670942517907 
+Testing accuracy: 0.47466390899689764 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.5065250176605179 
-Testing accuracy: 0.8852119958634953 
+Training loss: 9.99802044264013 
+Testing accuracy: 0.5656670113753878 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.3143017631583184 
-Testing accuracy: 0.953464322647363 
+Training loss: 8.104082728508175 
+Testing accuracy: 0.6421923474663909 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.6037538654735484 
-Testing accuracy: 0.889348500517063 
+Training loss: 6.881075106811333 
+Testing accuracy: 0.6907962771458118 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.317809006688798 
-Testing accuracy: 0.5729058945191313 
+Training loss: 6.034188407900115 
+Testing accuracy: 0.7156153050672182 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.22663358109596737 
-Testing accuracy: 0.9669079627714581 
+Training loss: 5.407869970911629 
+Testing accuracy: 0.7383660806618407 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.48206914867366535 
-Testing accuracy: 0.9358841778697001 
+Training loss: 4.939844988272658 
+Testing accuracy: 0.7528438469493278 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.4661939790199371 
-Testing accuracy: 0.9027921406411582 
+Training loss: 4.57538754767816 
+Testing accuracy: 0.7724922440537746 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.8103513997684739 
-Testing accuracy: 0.7404343329886246 
+Training loss: 4.27618077366813 
+Testing accuracy: 0.7849017580144778 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.6372482706913349 
-Testing accuracy: 0.8790072388831437 
+Training loss: 4.026048768517149 
+Testing accuracy: 0.7859358841778697 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.6927389911606624 
-Testing accuracy: 0.8779731127197518 
+Training loss: 3.811966079906118 
+Testing accuracy: 0.7900723888314375 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.5662634154545343 
-Testing accuracy: 0.36608066184074456 
+Training loss: 3.6241388328852864 
+Testing accuracy: 0.7993795243019648 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.23459096035605034 
-Testing accuracy: 0.9731127197518097 
+Training loss: 3.4620096329198407 
+Testing accuracy: 0.8035160289555325 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.7004847173294141 
-Testing accuracy: 0.8810754912099276 
+Training loss: 3.319894809969789 
+Testing accuracy: 0.8086866597724922 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.5667196439056074 
-Testing accuracy: 0.9410548086866598 
+Training loss: 3.1915148218390237 
+Testing accuracy: 0.8159255429162358 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.5186956578285886 
-Testing accuracy: 0.9462254395036195 
+Training loss: 3.0735900482020515 
+Testing accuracy: 0.8190279214064116 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.3797991175736338 
-Testing accuracy: 0.9762150982419855 
+Training loss: 2.9683232768063905 
+Testing accuracy: 0.8210961737331954 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.6381029249084775 
-Testing accuracy: 0.8697001034126164 
+Training loss: 2.8706944831373735 
+Testing accuracy: 0.8252326783867632 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.17432183985331 
-Testing accuracy: 0.7228541882109617 
+Training loss: 2.7805974967916174 
+Testing accuracy: 0.8304033092037229 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.7251206610784869 
-Testing accuracy: 0.9172699069286453 
+Training loss: 2.701513149220204 
+Testing accuracy: 0.8335056876938987 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.4547662298612054 
-Testing accuracy: 0.9524301964839711 
+Training loss: 2.6312608792589733 
+Testing accuracy: 0.8376421923474664 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 2.0235451224254084 
-Testing accuracy: 0.2957600827300931 
+Training loss: 2.5668404786191084 
+Testing accuracy: 0.843846949327818 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.6341383521616544 
-Testing accuracy: 0.35470527404343327 
+Training loss: 2.507514443421284 
+Testing accuracy: 0.8490175801447777 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.4663532449174884 
-Testing accuracy: 0.9431230610134437 
+Training loss: 2.453019639327315 
+Testing accuracy: 0.8531540847983454 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.0914672852404288 
-Testing accuracy: 0.7269906928645294 
+Training loss: 2.4015433147544694 
+Testing accuracy: 0.8572905894519132 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.756638406056859 
-Testing accuracy: 0.9089968976215098 
+Training loss: 2.3571134589551535 
+Testing accuracy: 0.8562564632885212 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.7680348187232163 
-Testing accuracy: 0.9100310237849017 
+Training loss: 2.3117909258104485 
+Testing accuracy: 0.859358841778697 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.7630490731435133 
-Testing accuracy: 0.8779731127197518 
+Training loss: 2.266949949502421 
+Testing accuracy: 0.860392967942089 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.48078424438492795 
-Testing accuracy: 0.9089968976215098 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.8946120765146517 
-Testing accuracy: 0.9141675284384695 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.4356136334963331 
-Testing accuracy: 0.9317476732161324 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.9877364669212132 
-Testing accuracy: 0.6608066184074457 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 1.6647961246984069 
-Testing accuracy: 0.3795243019648397 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.25082781733296616 
-Testing accuracy: 0.9689762150982419 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.6221547115423824 
-Testing accuracy: 0.9638055842812823 
-Local training... 
-I am client 2 
-Receiving new global model 
-Training loss: 0.7421915348088165 
+Training loss: 2.22283492708351 
 Testing accuracy: 0.8614270941054809 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.1340827052945617 
-Testing accuracy: 0.6442605997931747 
+Training loss: 2.17882170240086 
+Testing accuracy: 0.8645294725956567 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.7506070261723856 
-Testing accuracy: 0.3298862461220269 
+Training loss: 2.1347744228283725 
+Testing accuracy: 0.8645294725956567 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.6522378568487553 
-Testing accuracy: 0.8686659772492245 
+Training loss: 2.091063748708348 
+Testing accuracy: 0.8655635987590486 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.3720424608539679 
-Testing accuracy: 0.6153050672182007 
+Training loss: 2.0482300659532915 
+Testing accuracy: 0.8697001034126164 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.106849021322323 
-Testing accuracy: 0.6256463288521199 
+Training loss: 2.0067994310233566 
+Testing accuracy: 0.8697001034126164 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.4368655808561615 
-Testing accuracy: 0.9586349534643226 
+Training loss: 1.9669302700767373 
+Testing accuracy: 0.8707342295760083 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 2.5118731329842934 
-Testing accuracy: 0.09513960703205791 
+Training loss: 1.928647046829296 
+Testing accuracy: 0.8697001034126164 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.22388616587464588 
-Testing accuracy: 0.9669079627714581 
+Training loss: 1.8920368928140152 
+Testing accuracy: 0.8707342295760083 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.3508842220120407 
-Testing accuracy: 0.6059979317476732 
+Training loss: 1.8571064329484597 
+Testing accuracy: 0.8728024819027922 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.26776698044657765 
-Testing accuracy: 0.9710444674250258 
+Training loss: 1.824500405994845 
+Testing accuracy: 0.8748707342295761 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 0.7705846949991818 
-Testing accuracy: 0.8024819027921406 
+Training loss: 1.7935286340155885 
+Testing accuracy: 0.8759048603929679 
 Local training... 
 I am client 2 
 Receiving new global model 
-Training loss: 1.5385182591909996 
-Testing accuracy: 0.5367114788004137 
+Training loss: 1.763684108253761 
+Testing accuracy: 0.8748707342295761 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.734748488750928 
+Testing accuracy: 0.8769389865563598 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.6491369858908282 
+Testing accuracy: 0.8800413650465356 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.5784921122299134 
+Testing accuracy: 0.8852119958634953 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.5195121199530146 
+Testing accuracy: 0.8883143743536711 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.4686346047547267 
+Testing accuracy: 0.8914167528438469 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.425251309292803 
+Testing accuracy: 0.8934850051706308 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.3858458286332722 
+Testing accuracy: 0.8955532574974147 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.3497329956673316 
+Testing accuracy: 0.8976215098241985 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.3163764747328073 
+Testing accuracy: 0.8976215098241985 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.2852985658602605 
+Testing accuracy: 0.8986556359875905 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.2561666677966739 
+Testing accuracy: 0.9007238883143743 
+Local training... 
+I am client 2 
+Receiving new global model 
+Training loss: 1.2288234951660613 
+Testing accuracy: 0.9007238883143743 
 Local training... 

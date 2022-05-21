@@ -10,6 +10,18 @@ import numpy as np
 HOST = "127.0.0.1"
 
 
+def receive_model_from_client(server, _socket):
+    try:
+        received = receive_all(_socket)
+        received_clients_model = _pickle.loads(received)
+        client_id = received_clients_model["id"]
+        clients_model = received_clients_model["W"]
+        server.clients_models[client_id] = clients_model
+        _socket.close()
+    except socket.error as e:
+        pass
+
+
 def receive_all(sock):
     """
     Due to high dimensional packets (about 60k bytes) exchanged between server and client, we need to make the read of the received message incremental,
@@ -17,13 +29,12 @@ def receive_all(sock):
     :param sock: socket to receive from
     :return: the whole data in bytes
     """
-    BUFF_SIZE = 4096  # 4 KiB
+    BUFF_SIZE = 4096
     data = b''
     while True:
         part = sock.recv(BUFF_SIZE)
         data += part
         if len(part) < BUFF_SIZE:
-            # either 0 or end of data
             break
     return data
 
@@ -59,8 +70,6 @@ class Server:
         np.random.seed(123)
         self.W = np.random.randn(785, 10)
 
-        # print(sys.getsizeof(self.W))
-
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((HOST, int(self.port_no)))
 
@@ -81,24 +90,16 @@ class Server:
         """
         Runs the federated learning algorithm
         """
-        for communication_round in range(50):
-            #with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            # BROADCAST GLOBAL MODEL AND RECEIVE UPDATED ONE FROM CLIENTS
-            self.send_and_receive_model(50 - 1 - communication_round)
-            # # BROADCAST GLOBAL MODEL TO ALL THE CLIENTS
-            # self.broadcast_W(5 - 1 - communication_round)
-            #
-            # # RECEIVE LOCAL MODELS FROM CLIENTS
-            # self.server_socket.listen()
-            # for i in range(len(self.clients)):
-            #     client_socket, address = self.server_socket.accept()
-            #     received = receive_all(client_socket)
-            #     received_clients_model = _pickle.loads(received)
-            #     client_id = received_clients_model["id"]
-            #     clients_model = received_clients_model["W"]
-            #     self.clients_models[client_id] = clients_model
+        for communication_round in range(100):
+            print(f"Global Iteration: {communication_round}")
+            print(f"Total number of clients: {len(self.clients)}")
+            self.broadcast_global_model(100 - 1 - communication_round)
 
-            # SELECT WHICH MODELS TO COMBINE FOR THE NEW GLOBAL MODEL
+            # CHECK THAT EVERY CLIENT SENT THE UPDATED MODEL
+            received_all_models = self.check_received_all_models()
+            if not received_all_models:
+                self.handle_dead_clients()
+
             if self.client_subsampling:
                 selected_clients = self.subsample_clients()
             else:
@@ -113,37 +114,58 @@ class Server:
             # CLEAN MODELS DICTIONARY FOR NEXT ITERATION
             self.clients_models = dict()
 
-    def send_and_receive_model(self, rounds_left):
+    def handle_dead_clients(self):
+        for client in self.clients:
+            if not self.clients_models.keys().__contains__(client["id"]):
+                # client dead and will be removed from the clients list
+                print(f"------- CLIENT {client['id']} DIED --------")
+                self.clients.remove(client)
+
+    def check_received_all_models(self) -> bool:
+        """
+        Checks for a maximum of 10 seconds if all the models have been received by the server
+        if this happens before 10 seconds, then it means that all the alive clients sent their model
+        otherwise it means that a previously alive client died and we need to handle this
+        :return: True if all the alive clients sent their model, False if one or more clients died and didn't send the model
+        """
+        checks = 0
+        all_received = False
+        while checks < 10 and not all_received:
+            if len(self.clients) == len(
+                    list(self.clients_models.keys())):  # if the number of received models is equal to the number of alive clients
+                all_received = True
+            else:
+                checks += 1
+                time.sleep(0.5)
+        return all_received
+
+    def broadcast_global_model(self, rounds_left):
         """
         Sends global model to client and receives models from clients one by one
         :param rounds_left: rounds left for completing the federated training, will be sent to clients to let them know when to stop themselves
         """
+        print("Broadcasting global model")
         for client in self.clients:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _socket:
-                try:
-                    # PREPARE MODEL PACKAGE
-                    package = {
-                        "W": self.W,
-                        "rounds_left": rounds_left
-                    }
-                    message = _pickle.dumps(package)
-                    # print(sys.getsizeof(message))
+            _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                # PREPARE MODEL PACKAGE
+                package = {
+                    "W": self.W,
+                    "rounds_left": rounds_left
+                }
+                message = _pickle.dumps(package)
 
-                    # SEND MODEL
-                    _socket.connect((HOST, int(client["port_no"])))
-                    _socket.sendall(message)
+                # SEND MODEL
+                _socket.connect((HOST, int(client["port_no"])))
+                _socket.sendall(message)
 
-                    # RECEIVE UPDATED MODEL PACKAGE
-                    received = receive_all(_socket)
-                    received_clients_model = _pickle.loads(received)
-                    client_id = received_clients_model["id"]
-                    clients_model = received_clients_model["W"]
-                    self.clients_models[client_id] = clients_model
-
-                    print(f"Sent global model. Rounds left: {rounds_left}")
-                except socket.error as e:
-                    print(f"Server {self.port_no} error SENDING W to client {client['id']}")
-                    print(f"ERROR {e}")
+                # START NEW THREAD THAT WILL HANDLE THE RECEIVING OF THE UPDATED MODEL FROM CLIENT client
+                updated_model_listener = threading.Thread(target=receive_model_from_client, args=(self, _socket))
+                updated_model_listener.start()
+                print(f"Getting local model from client: {client['id']}")
+            except socket.error as e:
+                print(f"Server {self.port_no} error SENDING W to client {client['id']}")
+                print(f"ERROR {e}")
 
     def compute_new_global_model(self, selected_clients, total_size):
         """
@@ -152,7 +174,9 @@ class Server:
         :param total_size: total data size of the alive clients
         :return:
         """
-        result = np.zeros_like(self.get_model(selected_clients[0]))  # init the result to the same shape as the model but filled with 0, necessary for performing sum
+        print("Aggregating new global model")
+        result = np.zeros_like(self.get_model(selected_clients[
+                                                  0]))  # init the result to the same shape as the model but filled with 0, necessary for performing sum
         for client in selected_clients:
             model = self.get_model(client)
             model = np.array(model)
