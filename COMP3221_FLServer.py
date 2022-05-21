@@ -78,6 +78,9 @@ class Server:
         self.federated_learning()
 
     def federated_learning(self):
+        """
+        Runs the federated learning algorithm
+        """
         for communication_round in range(50):
             #with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # BROADCAST GLOBAL MODEL AND RECEIVE UPDATED ONE FROM CLIENTS
@@ -111,6 +114,10 @@ class Server:
             self.clients_models = dict()
 
     def send_and_receive_model(self, rounds_left):
+        """
+        Sends global model to client and receives models from clients one by one
+        :param rounds_left: rounds left for completing the federated training, will be sent to clients to let them know when to stop themselves
+        """
         for client in self.clients:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _socket:
                 try:
@@ -138,29 +145,13 @@ class Server:
                     print(f"Server {self.port_no} error SENDING W to client {client['id']}")
                     print(f"ERROR {e}")
 
-    # def broadcast_W(self, rounds_left: int):
-    #     """
-    #     Sends the current global model W to all the connected clients
-    #     :param _socket: socket used for sending and receiving models
-    #     :param rounds_left: number of global communication rounds left (used by clients for stopping themselves)
-    #     """
-    #     for client in self.clients:
-    #         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _socket:
-    #             try:
-    #                 packet = {
-    #                     "W": self.W,
-    #                     "rounds_left": rounds_left
-    #                 }
-    #                 message = _pickle.dumps(packet)
-    #                 print(sys.getsizeof(message))
-    #                 _socket.connect((HOST, int(client["port_no"])))
-    #                 _socket.sendall(message)
-    #                 print(f"Sent global model. Rounds left: {rounds_left}")
-    #             except socket.error as e:
-    #                 print(f"Server {self.port_no} error SENDING W to client {client['id']}")
-    #                 print(f"ERROR {e}")
-
     def compute_new_global_model(self, selected_clients, total_size):
+        """
+        Computes the new global model starting from the ones of the selected alive clients (depending on subsampling mode)
+        :param selected_clients: clients selected for combining models
+        :param total_size: total data size of the alive clients
+        :return:
+        """
         result = np.zeros_like(self.get_model(selected_clients[0]))  # init the result to the same shape as the model but filled with 0, necessary for performing sum
         for client in selected_clients:
             model = self.get_model(client)
@@ -172,7 +163,7 @@ class Server:
     def subsample_clients(self):
         """
         Subsample clients if the subsampling option is set to True
-        :return: the list of the subsampled clients
+        :return: the list of the sampled clients
         """
         match len(self.clients):
             case 1:

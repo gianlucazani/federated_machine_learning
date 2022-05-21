@@ -179,10 +179,8 @@ class Client:
     def accuracy(self, y_predictions, y):
         diff = y_predictions - y
         n_zeros = np.count_nonzero(diff == 0)
-        # print(f'Correctly predicted: {n_zeros}')
         np.asanyarray(n_zeros)
         accuracy = n_zeros / len(y)
-        # print(f"Accuracy: {accuracy}")
         return accuracy
 
     def predict(self, W, X):
