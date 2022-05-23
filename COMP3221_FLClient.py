@@ -110,11 +110,11 @@ class Client:
 
                     # Writing is moved down here for catching exception separately
                     try:
-                        f.write(f'I am client {self.id} \n')
-                        f.write(f'Receiving new global model \n')
-                        f.write(f'Training loss: {training_loss} \n')
-                        f.write(f'Testing accuracy: {testing_accuracy} \n')
-                        f.write(f'Local training... \n')
+                        f.write(f'{training_loss}, {testing_accuracy}')
+                        # f.write(f'Receiving new global model \n')
+                        # f.write(f'Training loss: {training_loss} \n')
+                        # f.write(f'Testing accuracy: {testing_accuracy} \n')
+                        # f.write(f'Local training... \n')
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
