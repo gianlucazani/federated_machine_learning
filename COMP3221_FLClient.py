@@ -42,7 +42,7 @@ class Client:
         self.log_file = os.path.join("./", "client" + str(self.id) + "_log.txt")
         # clean file before starting
         with open(self.log_file, 'w') as f:
-            f.write("")
+            f.write("client_id, communication_round, loss, accuracy")
 
         # RETRIEVE DATASET
         self.batch_size = batch_size
@@ -60,6 +60,7 @@ class Client:
 
     def run(self):
         rounds_left = 100
+
         while rounds_left > 0:
             try:
                 self.client_socket.listen()
@@ -110,11 +111,7 @@ class Client:
 
                     # Writing is moved down here for catching exception separately
                     try:
-                        f.write(f'I am client {self.id} \n')
-                        f.write(f'Receiving new global model \n')
-                        f.write(f'Training loss: {training_loss} \n')
-                        f.write(f'Testing accuracy: {testing_accuracy} \n')
-                        f.write(f'Local training... \n')
+                        f.write(f"{self.id}, {100 - rounds_left}, {training_loss}, {testing_accuracy}\n")
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
@@ -186,7 +183,7 @@ class Client:
         prediction[xid, y] -= 1
         return X.T.dot(prediction) / X.shape[0]
 
-    def softmax_fit(self, X, y, W, lr=0.2, epochs=2):
+    def softmax_fit(self, X, y, W, lr=0.35, epochs=2):
         ep = 0
         loss_hist = [self.softmax_loss(X, y, W)]  # store history of loss
         while ep < epochs:

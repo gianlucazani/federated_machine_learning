@@ -5,9 +5,31 @@ import sys
 import threading
 import time
 
-import numpy as np
+import torch
+import torch.nn as nn  # neural network
+import torch.nn.functional as F  # like the sigmoid, softmax, ...
 
 HOST = "127.0.0.1"
+
+
+class MCLR(nn.Module):
+
+    def __init__(self):
+        super(MCLR, self).__init__()
+        # Create a linear transformation to the incoming data
+        # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
+        self.fc1 = nn.Linear(784, 10)
+        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
+
+    # Define how the model is going to be run, from input to output
+    def forward(self, x):
+        # Flattens input by reshaping it into a one-dimensional tensor.
+        x = torch.flatten(x, 1)
+        # Apply linear transformation
+        x = self.fc1(x)
+        # Apply a softmax followed by a logarithm
+        output = F.log_softmax(x, dim=1)
+        return output
 
 
 def receive_model_from_client(server, _socket):
@@ -67,8 +89,7 @@ class Server:
         self.clients = list()  # list of objects { "id": int, "port_no": int, "data_size": int }
         self.clients_models = dict()  # (key = ID, value = model)
 
-        np.random.seed(123)
-        self.W = np.random.randn(785, 10)
+        self.model = MCLR()
 
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((HOST, int(self.port_no)))
@@ -109,7 +130,7 @@ class Server:
             total_size = self.get_total_size()
 
             # COMPUTE NEW GLOBAL MODEL
-            self.W = self.compute_new_global_model(selected_clients, total_size)
+            self.compute_new_global_model(selected_clients, total_size)
 
             # CLEAN MODELS DICTIONARY FOR NEXT ITERATION
             self.clients_models = dict()
@@ -151,7 +172,7 @@ class Server:
             try:
                 # PREPARE MODEL PACKAGE
                 package = {
-                    "W": self.W,
+                    "W": self.model,
                     "rounds_left": rounds_left
                 }
                 message = _pickle.dumps(package)
@@ -169,21 +190,12 @@ class Server:
                 print(f"ERROR {e}")
 
     def compute_new_global_model(self, selected_clients, total_size):
-        """
-        Computes the new global model starting from the ones of the selected alive clients (depending on subsampling mode)
-        :param selected_clients: clients selected for combining models
-        :param total_size: total data size of the alive clients
-        :return:
-        """
-        print("Aggregating new global model")
-        result = np.zeros_like(self.get_model(selected_clients[
-                                                  0]))  # init the result to the same shape as the model but filled with 0, necessary for performing sum
+        for param in self.model.parameters():
+            param.data = torch.zeros_like(param.data)
+
         for client in selected_clients:
-            model = self.get_model(client)
-            model = np.array(model)
-            coefficient = client["data_size"] / total_size
-            result += coefficient * model
-        return result
+            for server_param, user_param in zip(self.model.parameters(), self.get_model(client).parameters()):
+                server_param.data = server_param.data + user_param.data.clone() * client["data_size"] / total_size
 
     def subsample_clients(self):
         """
@@ -205,7 +217,7 @@ class Server:
         :return: client's model as np.array
         """
         client_id = client["id"]
-        model = np.array(self.clients_models[client_id])
+        model = self.clients_models[client_id]
         return model
 
     def get_total_size(self):

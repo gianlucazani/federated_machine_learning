@@ -1,3 +1,5 @@
+import csv
+
 import torch
 import torch.nn as nn  # neural network
 import torch.nn.functional as F  # like the sigmoid, softmax, ...
@@ -18,7 +20,7 @@ class MCLR(nn.Module):
         super(MCLR, self).__init__()
         # Create a linear transformation to the incoming data
         # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
-        self.fc1 = nn.Linear(10, 2)
+        self.fc1 = nn.Linear(784, 10)
         self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
 
     # Define how the model is going to be run, from input to output
@@ -87,17 +89,26 @@ class Client:
         # clean file before starting
         with open(self.log_file, 'w') as f:
             f.write("")
+        with open(f'evaluation_log_{self.id}.csv', "w") as f_eval:
+            f_eval.write("")
+            writer = csv.writer(f_eval)
+            writer.writerow(["client_id", "communication_round", "loss", "accuracy"])
 
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = get_data(
             self.id)
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
         self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
-        self.trainloader = DataLoader(self.train_data,
-                                      batch_size)
+        self.full_dataset = DataLoader(self.train_data,
+                                       self.train_samples)
+        self.batched_dataset = DataLoader(self.train_data,
+                                          batch_size)
         self.testloader = DataLoader(self.test_data, self.test_samples)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.bind((HOST, int(self.port_no)))
 
+        self.model = MCLR()
+        self.optimizer = torch.optim.SGD(self.model.parameters(),
+                                         lr=0.01)  # here the optimizer is set to be stochastic gradient descent
         self.loss = nn.NLLLoss()
 
     def set_parameters(self, model):
@@ -107,6 +118,8 @@ class Client:
     def run(self):
         rounds_left = 100
         self.handshake()
+        f_eval = open(f'evaluation_log_{self.id}.csv', "a+")
+        writer = csv.writer(f_eval)
         while rounds_left > 0:
             try:
                 self.client_socket.listen()
@@ -120,11 +133,7 @@ class Client:
                     received_global_model = _pickle.loads(received)
                     # print(f"-- Received a packet with dimension: {sys.getsizeof(received)} --")
                     W = received_global_model['W']
-                    print(W)
-                    self.model = W
-                    if rounds_left == 100:
-                        self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                                         lr=0.01)  # here the optimizer is set to be stochastic gradient descent
+                    self.set_parameters(W)
 
                     training_loss = self.train(2)
                     testing_accuracy = self.test()
@@ -144,6 +153,7 @@ class Client:
                         f.write(f'Training loss: {training_loss} \n')
                         f.write(f'Testing accuracy: {testing_accuracy} \n')
                         f.write(f'Local training... \n')
+                        writer.writerow([self.id, 100 - rounds_left, float(training_loss), testing_accuracy])
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
@@ -151,12 +161,18 @@ class Client:
                 print(f"Client {self.id} error while communicating with server")
                 print(f"ERROR: {e}")
                 continue
+        f_eval.flush()
+        f_eval.close()
 
     def train(self, epochs):
         self.model.train()
         for epoch in range(1, epochs + 1):
             self.model.train()
-            for i, (X, y) in enumerate(self.trainloader):
+            if self.optimization_method == "0":
+                dataset_to_use = self.full_dataset
+            else:
+                dataset_to_use = self.batched_dataset
+            for i, (X, y) in enumerate(dataset_to_use):
                 self.optimizer.zero_grad()
                 output = self.model(X)
                 loss = self.loss(output, y)
