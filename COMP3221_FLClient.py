@@ -1,13 +1,16 @@
+import random
 import sys
 import os
+
 import numpy as np
 import json
 import socket
 import threading
 import _pickle
 
-HOST = "127.0.0.1"
 
+HOST = "127.0.0.1"
+np.seterr(all='raise')
 
 def receive_all(sock):
     """
@@ -28,7 +31,7 @@ def receive_all(sock):
 
 
 class Client:
-    def __init__(self):
+    def __init__(self, batch_size):
         self.id = sys.argv[1]
         self.port_no = int(sys.argv[2])
         self.optimization_method = sys.argv[3]  # 0 for GD, 1 for Mini-Batch GD
@@ -42,10 +45,11 @@ class Client:
             f.write("")
 
         # RETRIEVE DATASET
-        self.X_train = np.array([])
-        self.Y_train = np.array([])
-        self.X_test = np.array([])
-        self.Y_test = np.array([])
+        self.batch_size = batch_size
+        self.X_train = np.array([], dtype=np.float128)
+        self.Y_train = np.array([], dtype=np.float128)
+        self.X_test = np.array([], dtype=np.float128)
+        self.Y_test = np.array([], dtype=np.float128)
         self.read_dataset()
 
         # SOCKET
@@ -70,18 +74,25 @@ class Client:
                     # print(f"-- Received a packet with dimension: {sys.getsizeof(received)} --")
                     W = received_global_model['W']
 
-                    # CALCULATE TRAINING LOSS
-                    training_loss = self.softmax_loss(self.X_train, self.Y_train, W)
+                    # CALCULATE TRAINING LOSS (loss is calculated over the entire set even with mini-batch)
+                    try:  # sometimes the softmax function raises "overflow encountered in exp", because the exponent is too big
+                        training_loss = self.softmax_loss(self.X_train, self.Y_train, W)
+                    except RuntimeWarning as e:
+                        continue
                     print(f'Training loss: {training_loss}')
 
-                    # PREDICT USING THE GLOBAL MODEL AND TEST ACCURACY
+                    # PREDICT USING THE GLOBAL MODEL AND TEST ACCURACY (accuracy is calculated over the entire set even with mini-batch)
                     y_predictions = self.predict(W, self.X_test)
                     testing_accuracy = self.accuracy(y_predictions, self.Y_test)
                     print(f'Testing accuracy: {testing_accuracy}')
 
                     # TRAIN THE MODEL WITH GD or MINI-BATCH GD
                     print(f'Local training...')
-                    W, loss_hist = self.softmax_fit(self.X_train, self.Y_train, W)
+                    if self.optimization_method == "1":
+                        X_batch_train, y_batch_train = self.get_batch()
+                        W, loss_hist = self.softmax_fit(X_batch_train, y_batch_train, W)
+                    elif self.optimization_method == "0":
+                        W, loss_hist = self.softmax_fit(self.X_train, self.Y_train, W)
                     updated_weights = {
                         'W': W,
                         'id': str(self.id)
@@ -112,6 +123,12 @@ class Client:
                 print(f"ERROR: {e}")
                 continue
 
+    def get_batch(self):
+        batch_observations_indexes = random.sample(range(0, self.X_train.shape[0]), self.batch_size)
+        X_batch_train = self.X_train[batch_observations_indexes, :]
+        y_batch_train = self.Y_train[batch_observations_indexes, ]
+        return X_batch_train, y_batch_train
+
     def handshake(self):
         try:
             print("Sending handshake")
@@ -139,20 +156,22 @@ class Client:
         with open(os.path.join(test_path), "r") as f_test:
             test = json.load(f_test)
             test_data.update(test['user_data'])
-        self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], \
-                                                               test_data['0']['x'], test_data['0']['y']
-        self.X_train = np.array(self.X_train)
-        self.Y_train = np.array(self.Y_train)
+        self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0']['y']
+        self.X_train = np.array(self.X_train, dtype=np.float128)
+        self.Y_train = np.array(self.Y_train, dtype=np.float128)
         self.Y_train = self.Y_train.astype(int)
-        self.X_test = np.array(self.X_test)
-        self.Y_test = np.array(self.Y_test)
+        self.X_test = np.array(self.X_test, dtype=np.float128)
+        self.Y_test = np.array(self.Y_test, dtype=np.float128)
         self.X_train = np.concatenate((self.X_train, np.ones((self.X_train.shape[0], 1))), axis=1)
         self.X_test = np.concatenate((self.X_test, np.ones((self.X_test.shape[0], 1))), axis=1)
 
     def softmax(self, X, W):
         Z = X.dot(W)
-        e_Z = np.exp(Z)
-        A = e_Z / e_Z.sum(axis=1, keepdims=True)
+        try:
+            e_Z = np.exp(Z)
+            A = e_Z / e_Z.sum(axis=1, keepdims=True)
+        except Exception as e:
+            print("")
         return A
 
     def softmax_loss(self, X, y, W):
@@ -166,10 +185,9 @@ class Client:
         prediction[xid, y] -= 1
         return X.T.dot(prediction) / X.shape[0]
 
-    def softmax_fit(self, X, y, W, lr=0.7, epochs=2):
+    def softmax_fit(self, X, y, W, lr=0.2, epochs=2):
         ep = 0
         loss_hist = [self.softmax_loss(X, y, W)]  # store history of loss
-        N = X.shape[0]
         while ep < epochs:
             ep += 1
             W -= lr * self.softmax_grad(X, y, W)
@@ -188,5 +206,5 @@ class Client:
         return np.argmax(A, axis=1)
 
 
-client = Client()
+client = Client(20)
 client.run()
