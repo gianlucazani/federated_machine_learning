@@ -132,7 +132,8 @@ class Server:
         all_received = False
         while checks < 10 and not all_received:
             if len(self.clients) == len(
-                    list(self.clients_models.keys())):  # if the number of received models is equal to the number of alive clients
+                    list(
+                        self.clients_models.keys())):  # if the number of received models is equal to the number of alive clients
                 all_received = True
             else:
                 checks += 1

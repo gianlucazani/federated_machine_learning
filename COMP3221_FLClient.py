@@ -8,9 +8,9 @@ import socket
 import threading
 import _pickle
 
-
 HOST = "127.0.0.1"
 np.seterr(all='raise')
+
 
 def receive_all(sock):
     """
@@ -126,7 +126,7 @@ class Client:
     def get_batch(self):
         batch_observations_indexes = random.sample(range(0, self.X_train.shape[0]), self.batch_size)
         X_batch_train = self.X_train[batch_observations_indexes, :]
-        y_batch_train = self.Y_train[batch_observations_indexes, ]
+        y_batch_train = self.Y_train[batch_observations_indexes,]
         return X_batch_train, y_batch_train
 
     def handshake(self):
@@ -156,7 +156,8 @@ class Client:
         with open(os.path.join(test_path), "r") as f_test:
             test = json.load(f_test)
             test_data.update(test['user_data'])
-        self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0']['y']
+        self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], \
+                                                               test_data['0']['x'], test_data['0']['y']
         self.X_train = np.array(self.X_train, dtype=np.float128)
         self.Y_train = np.array(self.Y_train, dtype=np.float128)
         self.Y_train = self.Y_train.astype(int)
