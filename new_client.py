@@ -171,7 +171,9 @@ class Client:
                     # CREATE UPDATE PACK TO SEND BACK TO SERVER
                     updated_weights = {
                         'model': self.model,
-                        'id': str(self.id)
+                        'id': str(self.id),
+                        'training_loss': training_loss,
+                        'testing_accuracy': testing_accuracy
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
