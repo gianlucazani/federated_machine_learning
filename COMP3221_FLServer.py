@@ -33,7 +33,7 @@ def receive_model_from_client(server, _socket):
             server.clients_models[client_id] = clients_model
             server.loss.append(received_clients_model['training_loss'])
             server.accuracy.append(received_clients_model['testing_accuracy'])
-        except EOFError as e:
+        except Exception as e:
             print("Client died")
             pass
         _socket.close()
