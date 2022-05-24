@@ -151,6 +151,11 @@ class Server:
         average_accuracy = sum(self.accuracy)/len(self.accuracy)
         print(f"Average Loss is: {average_loss}")
         print(f"Average accuracy is: {average_accuracy}")
+        with open("server_loss.txt",'w+') as f:
+            f.write("loss, accuracy")
+            for loss, accuracy in zip(self.loss, self.accuracy):
+                line = f"{loss}, {accuracy}"
+                f.write(line)
         self.alive = False
 
     def federated_learning(self):
