@@ -31,6 +31,8 @@ def receive_model_from_client(server, _socket):
             client_id = received_clients_model["id"]
             clients_model = received_clients_model["model"]
             server.clients_models[client_id] = clients_model
+            server.loss.append(received_clients_model['training_loss'])
+            server.accuracy.append(received_clients_model['testing_accuracy'])
         except EOFError as e:
             print("Client died")
             pass
@@ -120,6 +122,9 @@ class Server:
 
         self.communication_rounds = 100
 
+        self.loss = []
+        self.accuracy = []
+
     def run(self):
         self.alive = True
 
@@ -142,30 +147,10 @@ class Server:
 
         # EVALUATE GLOBAL MODEL AT THE END OF THE TRAINING
         print("finished learning: evaluating model...")
-        counter = 0
-        total_loss = 0
-        total_accuracy = 0
-        number_of_headers = 0
-        for client in self.clients:
-            file_path = 'evaluation_log_' + client['id'] + '.csv'
-            if client['model_sent'] == 1:
-                number_of_headers += 1
-            with open(file_path, 'r') as f:
-                for line in f:
-                    counter += 1
-                    line = line.split(',')
-                    try:
-                        total_loss += float(line[2])
-                        total_accuracy += float(line[3])
-                    except:
-                        continue
-        try:
-            average_loss = total_loss / (counter - number_of_headers)
-            average_accuracy = total_accuracy / (counter - number_of_headers)
-            print(f'Average Loss is: {average_loss}')
-            print(f'Average Accuracy is: {average_accuracy}')
-        except:
-            print("no training data calculated")
+        average_loss = sum(self.loss)/len(self.loss)
+        average_accuracy = sum(self.accuracy)/len(self.accuracy)
+        print(f"Average Loss is: {average_loss}")
+        print(f"Average accuracy is: {average_accuracy}")
         self.alive = False
 
     def federated_learning(self):
