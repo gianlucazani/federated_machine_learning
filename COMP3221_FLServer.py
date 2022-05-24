@@ -93,6 +93,7 @@ class Server:
 
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((HOST, int(self.port_no)))
+        self.communication_rounds = 100
 
     def run(self):
         self.alive = True
@@ -106,15 +107,35 @@ class Server:
         handshake_thread.start()
         time.sleep(10)
         self.federated_learning()
+        print("finished learning: evaluating model...")
+        counter=0
+        total_loss = 0
+        total_accuracy = 0
+        for client in self.clients:
+            file_path = 'evaluation_log_'+client['id']+'.csv'
+            with open(file_path, 'r') as f:
+                for line in f:
+                    counter+=1
+                    line = line.split(',')
+                    try:
+                        total_loss += float(line[2])
+                        total_accuracy += float(line[3])
+                    except:
+                        continue
+        average_loss = total_loss/(counter-len(self.clients))
+        average_accuracy = total_accuracy/(counter-len(self.clients))
+        print(f'Average Loss is: {average_loss}')
+        print(f'Average Accuracy is: {average_accuracy}')
+
 
     def federated_learning(self):
         """
         Runs the federated learning algorithm
         """
-        for communication_round in range(100):
+        for communication_round in range(self.communication_rounds):
             print(f"Global Iteration: {communication_round}")
             print(f"Total number of clients: {len(self.clients)}")
-            self.broadcast_global_model(100 - 1 - communication_round)
+            self.broadcast_global_model(self.communication_rounds - 1 - communication_round)
 
             # CHECK THAT EVERY CLIENT SENT THE UPDATED MODEL
             received_all_models = self.check_received_all_models()
