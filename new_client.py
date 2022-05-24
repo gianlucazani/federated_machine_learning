@@ -229,7 +229,6 @@ class Client:
         for x, y in self.testloader:
             output = self.model(x)
             test_acc += (torch.sum(torch.argmax(output, dim=1) == y) * 1. / y.shape[0]).item()
-            print(str(self.id) + ", Accuracy of client ", self.id, " is: ", test_acc)
         return test_acc
 
     def handshake(self):

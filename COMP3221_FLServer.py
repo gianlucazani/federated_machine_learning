@@ -26,10 +26,14 @@ def receive_model_from_client(server, _socket):
     """
     try:
         received = receive_all(_socket)
-        received_clients_model = _pickle.loads(received)
-        client_id = received_clients_model["id"]
-        clients_model = received_clients_model["model"]
-        server.clients_models[client_id] = clients_model
+        try:
+            received_clients_model = _pickle.loads(received)
+            client_id = received_clients_model["id"]
+            clients_model = received_clients_model["model"]
+            server.clients_models[client_id] = clients_model
+        except EOFError as e:
+            print("Client died")
+            pass
         _socket.close()
     except socket.error as e:
         pass
