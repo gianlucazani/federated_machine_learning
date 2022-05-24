@@ -111,8 +111,11 @@ class Server:
         counter=0
         total_loss = 0
         total_accuracy = 0
+        number_of_headers = 0
         for client in self.clients:
             file_path = 'evaluation_log_'+client['id']+'.csv'
+            if client['model_sent']==1:
+                number_of_headers +=1
             with open(file_path, 'r') as f:
                 for line in f:
                     counter+=1
@@ -123,8 +126,8 @@ class Server:
                     except:
                         continue
         try:
-            average_loss = total_loss/(counter-len(self.clients))
-            average_accuracy = total_accuracy/(counter-len(self.clients))
+            average_loss = total_loss/(counter-number_of_headers)
+            average_accuracy = total_accuracy/(counter-number_of_headers)
             print(f'Average Loss is: {average_loss}')
             print(f'Average Accuracy is: {average_accuracy}')
         except:
