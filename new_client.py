@@ -122,7 +122,7 @@ class Client:
 
         self.model = MCLR()
         self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                         lr=0.01)  # here the optimizer is set to be stochastic gradient descent
+                                         lr=0.02)  # here the optimizer is set to be stochastic gradient descent
         self.loss = nn.NLLLoss()
 
     def set_parameters(self, model):
@@ -254,5 +254,5 @@ class Client:
             pass
 
 
-client = Client(5)
+client = Client(20)
 client.run()

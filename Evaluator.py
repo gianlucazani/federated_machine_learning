@@ -17,7 +17,7 @@ class Evaluator:
         plt.show()
 
 
-files = ["evaluation_log_1.csv", "evaluation_log_2.csv"]
+files = ["evaluation_log_1.csv", "evaluation_log_2.csv", "evaluation_log_3.csv", "evaluation_log_4.csv", "evaluation_log_5.csv"]
 
 evaluator = Evaluator(files)
 evaluator.run()

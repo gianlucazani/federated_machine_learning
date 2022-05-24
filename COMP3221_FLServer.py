@@ -141,7 +141,7 @@ class Server:
         # START LISTENING FOR OTHER HANDSHAKES
         handshake_thread.start()
         time.sleep(10)  # timer after which the federated learning starts
-
+        start_time = time.time()
         # START FEDERATED LEARNING
         self.federated_learning()
 
@@ -151,11 +151,15 @@ class Server:
         average_accuracy = sum(self.accuracy)/len(self.accuracy)
         print(f"Average Loss is: {average_loss}")
         print(f"Average accuracy is: {average_accuracy}")
+<<<<<<< HEAD
         with open("server_loss.txt",'w+') as f:
             f.write("loss, accuracy")
             for loss, accuracy in zip(self.loss, self.accuracy):
                 line = f"{loss}, {accuracy}"
                 f.write(line)
+=======
+        print(f"Training time: {time.time() - start_time}")
+>>>>>>> ee1e20c14091d1da83d5980a7bd6c3e6fc5deef6
         self.alive = False
 
     def federated_learning(self):
