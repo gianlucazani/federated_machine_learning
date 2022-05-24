@@ -259,8 +259,9 @@ class Server:
                 updated_model_listener.start()
                 print(f"Getting local model from client: {client['id']}")
             except socket.error as e:
-                print(f"Server {self.port_no} error SENDING W to client {client['id']}")
-                print(f"ERROR {e}")
+                continue
+                # print(f"Server {self.port_no} error SENDING W to client {client['id']}")
+                # print(f"ERROR {e}")
 
     def compute_new_global_model(self, selected_clients, total_size):
         """
@@ -272,8 +273,10 @@ class Server:
             param.data = torch.zeros_like(param.data)
 
         for client in selected_clients:
-            for server_param, user_param in zip(self.model.parameters(), self.get_model(client).parameters()):
-                server_param.data = server_param.data + user_param.data.clone() * client["data_size"] / total_size
+            client_model = self.get_model(client)
+            if client_model:
+                for server_param, user_param in zip(self.model.parameters(), client_model.parameters()):
+                    server_param.data = server_param.data + user_param.data.clone() * client["data_size"] / total_size
 
     def subsample_clients(self):
         """
@@ -298,7 +301,9 @@ class Server:
         :return: client's model as np.array
         """
         client_id = client["id"]
-        model = self.clients_models[client_id]
+        model = False
+        if self.clients_models.keys().__contains__(client_id):
+            model = self.clients_models[client_id]
         return model
 
     def get_total_size(self):
