@@ -101,7 +101,7 @@ class Client:
         self.log_file = os.path.join("./", "client" + str(self.id) + "_log.txt")
 
         # clean file before starting
-        with open(self.log_file, 'model') as f:
+        with open(self.log_file, 'w') as f:
             f.write("")
         with open(f'evaluation_log_{self.id}.csv', "w") as f_eval:
             f_eval.write("")
