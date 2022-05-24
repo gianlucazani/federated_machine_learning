@@ -122,10 +122,13 @@ class Server:
                         total_accuracy += float(line[3])
                     except:
                         continue
-        average_loss = total_loss/(counter-len(self.clients))
-        average_accuracy = total_accuracy/(counter-len(self.clients))
-        print(f'Average Loss is: {average_loss}')
-        print(f'Average Accuracy is: {average_accuracy}')
+        try:
+            average_loss = total_loss/(counter-len(self.clients))
+            average_accuracy = total_accuracy/(counter-len(self.clients))
+            print(f'Average Loss is: {average_loss}')
+            print(f'Average Accuracy is: {average_accuracy}')
+        except:
+            print("no training data calculated")
 
 
     def federated_learning(self):
@@ -147,6 +150,10 @@ class Server:
             else:
                 selected_clients = self.clients
 
+            if len(self.clients) == 0:
+                self.clients_models = dict()
+                continue
+
             # GET TOTAL DATA SIZE (sum of data sizes of the alive clients)
             total_size = self.get_total_size()
 
@@ -158,7 +165,7 @@ class Server:
 
     def handle_dead_clients(self):
         for client in self.clients:
-            if not self.clients_models.keys().__contains__(client["id"]):
+            if not self.clients_models.keys().__contains__(client["id"]) and client['model_sent']==1:
                 # client dead and will be removed from the clients list
                 print(f"------- CLIENT {client['id']} DIED --------")
                 self.clients.remove(client)
@@ -201,6 +208,7 @@ class Server:
                 # SEND MODEL
                 _socket.connect((HOST, int(client["port_no"])))
                 _socket.sendall(message)
+                client['model_sent'] = 1
 
                 # START NEW THREAD THAT WILL HANDLE THE RECEIVING OF THE UPDATED MODEL FROM CLIENT client
                 updated_model_listener = threading.Thread(target=receive_model_from_client, args=(self, _socket))
@@ -224,6 +232,9 @@ class Server:
         :return: the list of the sampled clients
         """
         match len(self.clients):
+            case 0:
+                print("No clients exiting...")
+                return []
             case 1:
                 return list([self.clients[0]])
             case 2:

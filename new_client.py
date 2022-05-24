@@ -197,7 +197,8 @@ class Client:
                 packet = {
                     'id': str(self.id),
                     'port_no': int(self.port_no),
-                    'data_size': self.X_train.shape[0]
+                    'data_size': self.X_train.shape[0],
+                    'model_sent': 0
                 }
                 s.sendall(_pickle.dumps(packet))
         except socket.error as e:
