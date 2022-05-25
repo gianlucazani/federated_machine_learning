@@ -4,6 +4,7 @@ import socket
 import sys
 import threading
 import time
+import csv
 
 import torch
 import torch.nn as nn
@@ -31,8 +32,13 @@ def receive_model_from_client(server, _socket):
             client_id = received_clients_model["id"]
             clients_model = received_clients_model["model"]
             server.clients_models[client_id] = clients_model
-            server.loss.append(received_clients_model['training_loss'])
-            server.accuracy.append(received_clients_model['testing_accuracy'])
+            
+            server.loss.append(received_clients_model['local_training_loss'])
+            server.accuracy.append(received_clients_model['local_model_testing_accuracy'])
+
+            server.round_losses.append(received_clients_model['local_training_loss'])
+            server.round_accuracies.append(received_clients_model['local_model_testing_accuracy'])
+
         except Exception as e:
             print("Client died")
             pass
@@ -122,8 +128,18 @@ class Server:
 
         self.communication_rounds = 100
 
+        self.round_losses = []
+        self.round_accuracies = []
+
         self.loss = []
         self.accuracy = []
+
+        self.global_average_accuracy = -1
+        self.global_average_training_loss = -1
+
+        with open("server_average_loss_accuracy.csv",'w+') as f:
+            writer = csv.writer(f)
+            writer.writerow(["global_average_accuracy", "global_average_loss"])
 
     def run(self):
         self.alive = True
@@ -151,15 +167,12 @@ class Server:
         average_accuracy = sum(self.accuracy)/len(self.accuracy)
         print(f"Average Loss is: {average_loss}")
         print(f"Average accuracy is: {average_accuracy}")
-<<<<<<< HEAD
-        with open("server_loss.txt",'w+') as f:
-            f.write("loss, accuracy")
+        with open("server_log.csv",'w+') as f:
+            writer = csv.writer(f)
+            writer.writerow(["loss", "accuracy"])
             for loss, accuracy in zip(self.loss, self.accuracy):
-                line = f"{loss}, {accuracy}"
-                f.write(line)
-=======
+                writer.writerow([float(loss), accuracy])
         print(f"Training time: {time.time() - start_time}")
->>>>>>> ee1e20c14091d1da83d5980a7bd6c3e6fc5deef6
         self.alive = False
 
     def federated_learning(self):
@@ -194,6 +207,12 @@ class Server:
 
             # COMPUTE NEW GLOBAL MODEL
             self.compute_new_global_model(selected_clients, total_size)
+
+            # COMPUTE GLOBAL AVERAGES
+            self.compute_global_averages()
+
+            # LOG NEW GLOBAL AVERAGES
+            self.log_global_averages()
 
             # CLEAN MODELS DICTIONARY FOR NEXT ITERATION
             self.clients_models = dict()
@@ -237,9 +256,12 @@ class Server:
             _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 # PREPARE MODEL PACKAGE
+
                 package = {
                     "model": self.model,
-                    "rounds_left": rounds_left
+                    "rounds_left": rounds_left,
+                    "global_average_accuracy": self.global_average_accuracy,
+                    "global_average_training_loss": self.global_average_training_loss
                 }
                 message = _pickle.dumps(package)
 
@@ -271,6 +293,27 @@ class Server:
             if client_model:
                 for server_param, user_param in zip(self.model.parameters(), client_model.parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * client["data_size"] / total_size
+        
+
+    def compute_global_averages(self):
+        """
+        Computes the global average accuracy and the global average training loss. 
+        """
+        self.global_average_training_loss = sum(self.round_losses)/len(self.round_losses)
+        self.global_average_accuracy = sum(self.round_accuracies)/len(self.round_accuracies)
+
+        
+        # SET THE ROUND LOSSES AND ACCURACIES TO AN EMPTY ARRAY
+        self.round_losses = []
+        self.round_accuracies = []
+
+    def log_global_averages(self):
+        """
+        Logs global averages to a file
+        """
+        with open("server_average_loss_accuracy.csv",'a') as f:
+            writer = csv.writer(f)
+            writer.writerow([float(self.global_average_accuracy), float(self.global_average_training_loss)])
 
     def subsample_clients(self):
         """

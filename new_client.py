@@ -106,8 +106,8 @@ class Client:
         with open(f'evaluation_log_{self.id}.csv', "w") as f_eval:
             f_eval.write("")
             writer = csv.writer(f_eval)
-            writer.writerow(["client_id", "communication_round", "loss", "accuracy"])
-
+            writer.writerow(["client_id", "communication_round", "local_training_loss", "local_model_testing_accuracy", "global_model_accuracy"])
+        
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = get_data(
             self.id)
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
@@ -154,43 +154,61 @@ class Client:
                     conn, addr = self.client_socket.accept()
                     print(f'Receiving new global model')
                     received = receive_all(conn)
-                    received_global_model = _pickle.loads(received)
-                    global_model = received_global_model['model']
+                    received_packet = _pickle.loads(received)
+                    global_model = received_packet['model']
+                    rounds_left = received_packet['rounds_left']
+                    global_average_accuracy = received_packet['global_average_accuracy']
+                    global_average_training_loss = received_packet['global_average_training_loss']
+                    
+                    if global_average_accuracy > 0 and global_average_training_loss > 0:
+                        print(f"Global Average Accuracy {global_average_accuracy}")
+                        print(f"Global Average Training Loss {global_average_training_loss}")
+                    else: 
+                        print("Initial training round, no global accuracy or training loss")
 
                     # UPDATE CLIENT'S MODEL WITH THE GLOBAL ONE
                     self.set_parameters(global_model)
+                    
+                    # TEST GLOBAL MODEL ON LOCAL DATASET
+                    global_model_accuracy = self.test()
+                    print(f'Global model accuracy tested on local data: {global_model_accuracy}')
 
                     # CALCULATE LOSS AND TRAIN
-                    training_loss = self.train()
-                    print("Local training...")
-                    print(f"Training loss: {training_loss}")
+                    local_training_loss = self.train()
+                    print(f"Local training...")
+                    print(f"Local training loss: {local_training_loss}")
                     # TEST THE MODEL
-                    testing_accuracy = self.test()
-                    print(f"Testing accuracy: {testing_accuracy}")
+                    local_model_testing_accuracy = self.test()
+                    print(f"Local model testing accuracy: {local_model_testing_accuracy}")
 
                     # CREATE UPDATE PACK TO SEND BACK TO SERVER
                     updated_weights = {
                         'model': self.model,
                         'id': str(self.id),
-                        'training_loss': training_loss,
-                        'testing_accuracy': testing_accuracy
+                        'local_training_loss': local_training_loss,
+                        'local_model_testing_accuracy': local_model_testing_accuracy
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
                     print("Sending back new global model")
                     conn.sendall(_pickle.dumps(updated_weights))
-                    rounds_left = received_global_model['rounds_left']
 
                     try:
                         # WRITE TO LOG FILE
                         f.write(f'I am client {self.id} \n')
                         f.write(f'Receiving new global model \n')
+                        if global_average_accuracy > 0 and global_average_training_loss > 0:
+                            f.write(f"Global Average Accuracy {global_average_accuracy}\n")
+                            f.write(f"Global Average Training Loss {global_average_training_loss}\n")
+                        else: 
+                            f.write(f"Initial training round, no global accuracy or training loss\n")
+                        f.write(f'Global model accuracy tested on local data: {global_model_accuracy}\n')
                         f.write(f'Local training... \n')
-                        f.write(f'Training loss: {training_loss} \n')
-                        f.write(f'Testing accuracy: {testing_accuracy} \n')
-
+                        f.write(f'Local Training loss: {local_training_loss} \n')
+                        f.write(f'Local mmodel Testing accuracy: {local_model_testing_accuracy} \n')
+                        f.write(f'Sending back new global model\n')
                         # WRITE TO EVALUATE LOG FILE
-                        writer.writerow([self.id, 100 - rounds_left, float(training_loss), testing_accuracy])
+                        writer.writerow([self.id, 100 - rounds_left, float(local_training_loss), local_model_testing_accuracy, global_model_accuracy])
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
