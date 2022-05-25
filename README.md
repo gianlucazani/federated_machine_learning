@@ -1,6 +1,6 @@
-# COMP3221 Assignment2: Report
+# COMP3221 Assignment3: Report
 <p align="center">
-  <img src="" width="450px"/>
+  <img src="https://user-images.githubusercontent.com/82953736/170199199-2f7854e2-7829-45c8-9321-0d2dd4635198.png" width="700px"/>
 </p>
 The assignment topic is the realization of a Federated Training network where a Server aggregates the models given by five Clients which train the global model on a subset of the original data. 
 ## Information
@@ -75,4 +75,25 @@ Where ```Client-id``` should be an integer positve value, ```Opt-Method``` could
 
 ## Implementation
 
-### 
+The graph below shows how the flow of execution achieves the requirements:
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170196856-8c37f6de-2ee6-4b07-b5d8-151d2761045e.png" width="800px"/>
+</p>
+
+Where the meaning of the acronyms are:
+<ul>
+  <li>
+    <b>GAAn</b>: Global Average Accuracy of the n-th Model (or at (n - 1)-th round)
+  </li>
+  <li>
+    <b>GATLn</b>: Global Average Training Loss of the n-th Model (or at (n - 1)-th round)
+  </li>
+  <li>
+    <b>LTLnm</b>: Local Trianing Loss while training the n-th Model (or at (n - 1)-th round) on the m-th client's training set
+  </li>
+  <li>
+    <b>GMALDnm</b>: Global Model Accuracy on Local Data of the n-th Model (or at (n - 1)-th round) on the m-th client's test set
+  </li>
+</ul>
+
