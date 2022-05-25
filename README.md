@@ -97,3 +97,90 @@ Where the meaning of the acronyms are:
   </li>
 </ul>
 
+Note that the shema above refers to an execution of two communication rounds with two clients. Moreover, the actions taken by the server and the clients are more than the ones written in the schema, which is a simplified and essential version of the program. 
+
+We will now explore more in depth how the execution works.
+
+### Server's point of view
+
+The server will execute in this way (in order):
+
+<ul>
+  <li>
+    Generate initial random model (weights vector) at initialization
+  </li>
+  <li>
+    Waits for handshake from the first client
+  </li>
+  <li>
+    Once the first handshake is received, waits for 30 seconds for other handshakes before starting the federated training. Clients will be able to join the network at any time, because the server keeps listening for handskakes thanks to the HandshakeThread
+  </li>
+  <li>
+    After waiting the 30 seconds, the server will start the federated training
+    <ul>
+      <li>
+        Broadcast global model to all alive clients
+      </li>
+      <li>
+        Wait for all the responses with updated models and statistics about the global model just sent
+      </li>
+      <li>
+        If some of the supposingly alive clients don't send the model, find out which died and remove it from the alive clients list
+      </li>
+      <li>
+        Save clients' tested accuracies and losses, will be used both for calculating average accuracy and loss at each round and for calculating the         overall final average accuracy and loss when the training ends.
+      </li>
+      <li>
+        Aggregate selected clients' models with a weighted average, in this way the server generate the new global model
+      </li>
+      <li>
+        Repeat the process until the communication rounds end
+      </li>
+    </ul>
+  </li>
+</ul>
+
+### Client's point of view
+
+The client execution is structured as follows:
+
+<ul>
+  <li>
+    Load data from the local dataset and save them in data structures, which will store training and test data separately
+  </li>
+  <li>
+    Send handshake to the server in the format specified in the assignment sheet
+  </li>
+  <li>
+    Upon reception of the packet from the server, the client will execute in this way:
+    <ul>
+      <li>
+        Print at terminal the statistics about global average loss and accuracy of the received model
+      </li>
+      <li>
+        Test the received model on the local test set
+      </li>
+      <li>
+        Train the model on the local training set and get the training loss
+      </li>
+      <li>
+        Test the newly trained model on the test dataset
+      </li>
+      <li>
+        Send back to server the updated model together with the training loss and the accuracy on the test data of the received global model
+      </li>
+      <li>
+        While printing at terminal, save the same output to the client's log file
+      </li>
+      <li>
+        Save communication round, global model average accuracy, global model average training loss, global model accuracy on local data, training loss and accuracy of the newly trained model in a .csv file used for evaluation purposes.
+      </li>
+      <li>
+        Check how many rounds are left and if they're 0, stop. If some other rounds are left, keep listening for new global model from the server.
+      </li>
+    </ul>
+  </li>
+</ul>
+
+## Results and Examples
+
