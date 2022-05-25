@@ -28,19 +28,23 @@ def receive_model_from_client(server, _socket):
     try:
         received = receive_all(_socket)
         try:
-            received_clients_model = _pickle.loads(received)
-            client_id = received_clients_model["id"]
-            clients_model = received_clients_model["model"]
-            server.clients_models[client_id] = clients_model
+            received_packet = _pickle.loads(received)
+            client_id = received_packet["id"]
+            clients_model = received_packet["model"]
+            local_training_loss = received_packet['local_training_loss']
+            global_model_accuracy = received_packet['global_model_accuracy']
             
-            server.loss.append(received_clients_model['local_training_loss'])
-            server.accuracy.append(received_clients_model['local_model_testing_accuracy'])
+            server.loss.append(local_training_loss)
+            server.accuracy.append(global_model_accuracy)
 
-            server.round_losses.append(received_clients_model['local_training_loss'])
-            server.round_accuracies.append(received_clients_model['local_model_testing_accuracy'])
+            server.round_losses.append(local_training_loss)
+            server.round_accuracies.append(global_model_accuracy)
+
+            server.clients_models[client_id] = clients_model
+
 
         except Exception as e:
-            print("Client died")
+            print(f"Exception is: {e}")
             pass
         _socket.close()
     except socket.error as e:

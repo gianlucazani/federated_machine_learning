@@ -182,16 +182,16 @@ class Client:
                     print(f"Local model testing accuracy: {local_model_testing_accuracy}")
 
                     # CREATE UPDATE PACK TO SEND BACK TO SERVER
-                    updated_weights = {
+                    update_packet = {
                         'model': self.model,
                         'id': str(self.id),
                         'local_training_loss': local_training_loss,
-                        'local_model_testing_accuracy': local_model_testing_accuracy
+                        'global_model_accuracy': global_model_accuracy
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
                     print("Sending back new global model")
-                    conn.sendall(_pickle.dumps(updated_weights))
+                    conn.sendall(_pickle.dumps(update_packet))
 
                     try:
                         # WRITE TO LOG FILE
