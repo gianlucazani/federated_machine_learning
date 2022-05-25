@@ -170,7 +170,7 @@ class Server:
         average_loss = sum(self.loss)/len(self.loss)
         average_accuracy = sum(self.accuracy)/len(self.accuracy)
         print(f"Average Loss is: {average_loss}")
-        print(f"Average accuracy is: {average_accuracy}")
+        print(f"Average Accuracy is: {average_accuracy}")
         with open("server_log.csv",'w+') as f:
             writer = csv.writer(f)
             writer.writerow(["loss", "accuracy"])
