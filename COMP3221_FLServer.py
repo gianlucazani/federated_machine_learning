@@ -139,7 +139,7 @@ class Server:
 
         with open("server_average_loss_accuracy.csv",'w+') as f:
             writer = csv.writer(f)
-            writer.writerow(["global_average_accuracy", "global_average_loss"])
+            writer.writerow(["communication_round","global_average_accuracy", "global_average_loss"])
 
     def run(self):
         self.alive = True
@@ -212,7 +212,7 @@ class Server:
             self.compute_global_averages()
 
             # LOG NEW GLOBAL AVERAGES
-            self.log_global_averages()
+            self.log_global_averages(communication_round)
 
             # CLEAN MODELS DICTIONARY FOR NEXT ITERATION
             self.clients_models = dict()
@@ -307,13 +307,13 @@ class Server:
         self.round_losses = []
         self.round_accuracies = []
 
-    def log_global_averages(self):
+    def log_global_averages(self, communication_round):
         """
         Logs global averages to a file
         """
         with open("server_average_loss_accuracy.csv",'a') as f:
             writer = csv.writer(f)
-            writer.writerow([float(self.global_average_accuracy), float(self.global_average_training_loss)])
+            writer.writerow([communication_round, float(self.global_average_accuracy), float(self.global_average_training_loss)])
 
     def subsample_clients(self):
         """
