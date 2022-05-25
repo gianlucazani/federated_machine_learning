@@ -1,15 +1,49 @@
-import random
-import sys
-import os
+import csv
 
-import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import os
 import json
+from torch.utils.data import DataLoader
 import socket
-import threading
 import _pickle
+import sys
 
 HOST = "127.0.0.1"
-np.seterr(all='raise')
+
+
+# -------------------------------------------------------------------------------------
+# -------------------------------------- METHODS --------------------------------------
+# -------------------------------------------------------------------------------------
+
+
+def get_data(_id):
+    """
+    Retrieves data from the right file depending on the client id
+    :param _id: id of the client retrieving the data
+    :return: train and tests sets as tensors
+    """
+    train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(_id) + ".json")
+    test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(_id) + ".json")
+    train_data = {}
+    test_data = {}
+
+    with open(os.path.join(train_path), "r") as f_train:
+        train = json.load(f_train)
+        train_data.update(train['user_data'])
+    with open(os.path.join(test_path), "r") as f_test:
+        test = json.load(f_test)
+        test_data.update(test['user_data'])
+
+    X_train, y_train, X_test, y_test = train_data['0']['x'], train_data['0']['y'], test_data['0']['x'], test_data['0'][
+        'y']
+    X_train = torch.Tensor(X_train).view(-1, 1, 28, 28).type(torch.float32)
+    y_train = torch.Tensor(y_train).type(torch.int64)
+    X_test = torch.Tensor(X_test).view(-1, 1, 28, 28).type(torch.float32)
+    y_test = torch.Tensor(y_test).type(torch.int64)
+    train_samples, test_samples = len(y_train), len(y_test)
+    return X_train, y_train, X_test, y_test, train_samples, test_samples
 
 
 def receive_all(sock):
@@ -30,37 +64,86 @@ def receive_all(sock):
     return data
 
 
+# -------------------------------------------------------------------------------------
+# -------------------------------------- CLASSES --------------------------------------
+# -------------------------------------------------------------------------------------
+
+class MCLR(nn.Module):
+
+    def __init__(self):
+        super(MCLR, self).__init__()
+        # Create a linear transformation to the incoming data
+        # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
+        self.fc1 = nn.Linear(784, 10)
+        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
+
+    # Define how the model is going to be run, from input to output
+    def forward(self, x):
+        # Flattens input by reshaping it into a one-dimensional tensor.
+        x = torch.flatten(x, 1)
+        # Apply linear transformation
+        x = self.fc1(x)
+        # Apply a softmax followed by a logarithm
+        output = F.log_softmax(x, dim=1)
+        return output
+
+
 class Client:
     def __init__(self, batch_size):
+
         self.id = sys.argv[1]
         self.port_no = int(sys.argv[2])
         self.optimization_method = sys.argv[3]  # 0 for GD, 1 for Mini-Batch GD
 
         self.server_port_no = 6000  # fixed to 6000
 
-        # LOG FILE
+        # LOG FILES
         self.log_file = os.path.join("./", "client" + str(self.id) + "_log.txt")
+
         # clean file before starting
         with open(self.log_file, 'w') as f:
-            f.write("client_id, communication_round, loss, accuracy")
-
-        # RETRIEVE DATASET
-        self.batch_size = batch_size
-        self.X_train = np.array([], dtype=np.float128)
-        self.Y_train = np.array([], dtype=np.float128)
-        self.X_test = np.array([], dtype=np.float128)
-        self.Y_test = np.array([], dtype=np.float128)
-        self.read_dataset()
-
-        # SOCKET
+            f.write("")
+        with open(f'evaluation_log_{self.id}.csv', "w") as f_eval:
+            f_eval.write("")
+            writer = csv.writer(f_eval)
+            writer.writerow(["client_id", "communication_round", "local_training_loss", "local_model_testing_accuracy", "global_model_accuracy"])
+        
+        self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = get_data(
+            self.id)
+        self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
+        self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
+        self.full_dataset = DataLoader(self.train_data,
+                                       self.train_samples)
+        self.batched_dataset = DataLoader(self.train_data,
+                                          batch_size)
+        self.testloader = DataLoader(self.test_data, self.test_samples)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.bind((HOST, int(self.port_no)))
-        handshake_thread = threading.Thread(target=self.handshake())
-        handshake_thread.start()
+
+        self.model = MCLR()
+        self.optimizer = torch.optim.SGD(self.model.parameters(),
+                                         lr=0.02)  # here the optimizer is set to be stochastic gradient descent
+        self.loss = nn.NLLLoss()
+
+    def set_parameters(self, model):
+        """
+        Updates the old model's parameters with the new one, which will be the global model sent by the server at each communication round
+        :param model: the new model
+        """
+        for old_param, new_param in zip(self.model.parameters(), model.parameters()):
+            old_param.data = new_param.data.clone()
 
     def run(self):
         rounds_left = 100
 
+        # SEND HANDSHAKE FOR CONNECTING TO SERVER
+        self.handshake()
+
+        # WRITE HEADER IN THE EVALUATION FILE
+        f_eval = open(f'evaluation_log_{self.id}.csv', "a+")
+        writer = csv.writer(f_eval)
+
+        # START LISTENING FOR GLOBAL MODEL, EVALUATE IT, TRAIN IT, SEND BACK
         while rounds_left > 0:
             try:
                 self.client_socket.listen()
@@ -71,47 +154,61 @@ class Client:
                     conn, addr = self.client_socket.accept()
                     print(f'Receiving new global model')
                     received = receive_all(conn)
-                    received_global_model = _pickle.loads(received)
-                    # print(f"-- Received a packet with dimension: {sys.getsizeof(received)} --")
-                    W = received_global_model['W']
+                    received_packet = _pickle.loads(received)
+                    global_model = received_packet['model']
+                    rounds_left = received_packet['rounds_left']
+                    global_average_accuracy = received_packet['global_average_accuracy']
+                    global_average_training_loss = received_packet['global_average_training_loss']
+                    
+                    if global_average_accuracy > 0 and global_average_training_loss > 0:
+                        print(f"Global Average Accuracy {global_average_accuracy}")
+                        print(f"Global Average Training Loss {global_average_training_loss}")
+                    else: 
+                        print("Initial training round, no global accuracy or training loss")
 
-                    # CALCULATE TRAINING LOSS (loss is calculated over the entire set even with mini-batch)
-                    try:  # sometimes the softmax function raises "overflow encountered in exp", because the exponent is too big
-                        training_loss = self.softmax_loss(self.X_train, self.Y_train, W)
-                    except RuntimeWarning as e:
-                        continue
-                    print(f'Training loss: {training_loss}')
+                    # UPDATE CLIENT'S MODEL WITH THE GLOBAL ONE
+                    self.set_parameters(global_model)
+                    
+                    # TEST GLOBAL MODEL ON LOCAL DATASET
+                    global_model_accuracy = self.test()
+                    print(f'Global model accuracy tested on local data: {global_model_accuracy}')
 
-                    # PREDICT USING THE GLOBAL MODEL AND TEST ACCURACY (accuracy is calculated over the entire set even with mini-batch)
-                    y_predictions = self.predict(W, self.X_test)
-                    testing_accuracy = self.accuracy(y_predictions, self.Y_test)
-                    print(f'Testing accuracy: {testing_accuracy}')
+                    # CALCULATE LOSS AND TRAIN
+                    local_training_loss = self.train()
+                    print(f"Local training...")
+                    print(f"Local training loss: {local_training_loss}")
+                    # TEST THE MODEL
+                    local_model_testing_accuracy = self.test()
+                    print(f"Local model testing accuracy: {local_model_testing_accuracy}")
 
-                    # TRAIN THE MODEL WITH GD or MINI-BATCH GD
-                    print(f'Local training...')
-                    if self.optimization_method == "1":
-                        X_batch_train, y_batch_train = self.get_batch()
-                        W, loss_hist = self.softmax_fit(X_batch_train, y_batch_train, W)
-                    elif self.optimization_method == "0":
-                        W, loss_hist = self.softmax_fit(self.X_train, self.Y_train, W)
+                    # CREATE UPDATE PACK TO SEND BACK TO SERVER
                     updated_weights = {
-                        'W': W,
-                        'id': str(self.id)
+                        'model': self.model,
+                        'id': str(self.id),
+                        'local_training_loss': local_training_loss,
+                        'local_model_testing_accuracy': local_model_testing_accuracy
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
-                    # print(f"-- Sending a packet with dimension: {sys.getsizeof(_pickle.dumps(updated_weights))} -- ")
+                    print("Sending back new global model")
                     conn.sendall(_pickle.dumps(updated_weights))
-                    rounds_left = received_global_model['rounds_left']
 
-                    # WRITE TO FILE
-                    # we might choose to write something different to the file, maybe something easier to be read when performing final evaluation
-                    # we could print data in a fancier way (maybe .csv)
-                    # the text about what the client is doing is only left to be printed at terminal but not in the log file
-
-                    # Writing is moved down here for catching exception separately
                     try:
-                        f.write(f"{self.id}, {100 - rounds_left}, {training_loss}, {testing_accuracy}\n")
+                        # WRITE TO LOG FILE
+                        f.write(f'I am client {self.id} \n')
+                        f.write(f'Receiving new global model \n')
+                        if global_average_accuracy > 0 and global_average_training_loss > 0:
+                            f.write(f"Global Average Accuracy {global_average_accuracy}\n")
+                            f.write(f"Global Average Training Loss {global_average_training_loss}\n")
+                        else: 
+                            f.write(f"Initial training round, no global accuracy or training loss\n")
+                        f.write(f'Global model accuracy tested on local data: {global_model_accuracy}\n')
+                        f.write(f'Local training... \n')
+                        f.write(f'Local Training loss: {local_training_loss} \n')
+                        f.write(f'Local mmodel Testing accuracy: {local_model_testing_accuracy} \n')
+                        f.write(f'Sending back new global model\n')
+                        # WRITE TO EVALUATE LOG FILE
+                        writer.writerow([self.id, 100 - rounds_left, float(local_training_loss), local_model_testing_accuracy, global_model_accuracy])
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
@@ -119,14 +216,45 @@ class Client:
                 print(f"Client {self.id} error while communicating with server")
                 print(f"ERROR: {e}")
                 continue
+        f_eval.flush()
+        f_eval.close()
 
-    def get_batch(self):
-        batch_observations_indexes = random.sample(range(0, self.X_train.shape[0]), self.batch_size)
-        X_batch_train = self.X_train[batch_observations_indexes, :]
-        y_batch_train = self.Y_train[batch_observations_indexes,]
-        return X_batch_train, y_batch_train
+    def train(self):
+        """
+        Performs training of the model by running two epochs. The optimization will change depending on the optimization method chosen at start
+        :return: the loss of the model over the training set
+        """
+        self.model.train()
+        for epoch in range(2):
+            self.model.train()
+            if self.optimization_method == "0":
+                dataset_to_use = self.full_dataset
+            else:
+                dataset_to_use = self.batched_dataset
+            for i, (X, y) in enumerate(dataset_to_use):
+                self.optimizer.zero_grad()
+                output = self.model(X)
+                loss = self.loss(output, y)
+                loss.backward()
+                self.optimizer.step()
+        return loss.data
+
+    def test(self):
+        """
+        Tests the model over the client's test set
+        :return: the model accuracy on the testing set
+        """
+        self.model.eval()
+        test_acc = 0
+        for x, y in self.testloader:
+            output = self.model(x)
+            test_acc += (torch.sum(torch.argmax(output, dim=1) == y) * 1. / y.shape[0]).item()
+        return test_acc
 
     def handshake(self):
+        """
+        Sends handshake to the server
+        """
         try:
             print("Sending handshake")
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -134,74 +262,14 @@ class Client:
                 packet = {
                     'id': str(self.id),
                     'port_no': int(self.port_no),
-                    'data_size': self.X_train.shape[0]
+                    'data_size': self.X_train.shape[0],
+                    'model_sent': 0
                 }
                 s.sendall(_pickle.dumps(packet))
         except socket.error as e:
             print(f"Client {self.id} cannot send handshake")
             print(f"ERROR: {e}")
             pass
-
-    def read_dataset(self):
-        train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(self.id) + ".json")
-        test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(self.id) + ".json")
-        train_data = {}
-        test_data = {}
-        with open(os.path.join(train_path), "r") as f_train:
-            train = json.load(f_train)
-            train_data.update(train['user_data'])
-        with open(os.path.join(test_path), "r") as f_test:
-            test = json.load(f_test)
-            test_data.update(test['user_data'])
-        self.X_train, self.Y_train, self.X_test, self.Y_test = train_data['0']['x'], train_data['0']['y'], \
-                                                               test_data['0']['x'], test_data['0']['y']
-        self.X_train = np.array(self.X_train, dtype=np.float128)
-        self.Y_train = np.array(self.Y_train, dtype=np.float128)
-        self.Y_train = self.Y_train.astype(int)
-        self.X_test = np.array(self.X_test, dtype=np.float128)
-        self.Y_test = np.array(self.Y_test, dtype=np.float128)
-        self.X_train = np.concatenate((self.X_train, np.ones((self.X_train.shape[0], 1))), axis=1)
-        self.X_test = np.concatenate((self.X_test, np.ones((self.X_test.shape[0], 1))), axis=1)
-
-    def softmax(self, X, W):
-        Z = X.dot(W)
-        try:
-            e_Z = np.exp(Z)
-            A = e_Z / e_Z.sum(axis=1, keepdims=True)
-        except Exception as e:
-            print("")
-        return A
-
-    def softmax_loss(self, X, y, W):
-        A = self.softmax(X, W)
-        id0 = np.arange(X.shape[0])
-        return -np.mean(np.log(A[id0, y]))
-
-    def softmax_grad(self, X, y, W):
-        prediction = self.softmax(X, W)
-        xid = range(X.shape[0])
-        prediction[xid, y] -= 1
-        return X.T.dot(prediction) / X.shape[0]
-
-    def softmax_fit(self, X, y, W, lr=0.35, epochs=2):
-        ep = 0
-        loss_hist = [self.softmax_loss(X, y, W)]  # store history of loss
-        while ep < epochs:
-            ep += 1
-            W -= lr * self.softmax_grad(X, y, W)
-            loss_hist.append(self.softmax_loss(X, y, W))
-        return W, loss_hist
-
-    def accuracy(self, y_predictions, y):
-        diff = y_predictions - y
-        n_zeros = np.count_nonzero(diff == 0)
-        np.asanyarray(n_zeros)
-        accuracy = n_zeros / len(y)
-        return accuracy
-
-    def predict(self, W, X):
-        A = self.softmax(X, W)
-        return np.argmax(A, axis=1)
 
 
 client = Client(20)
