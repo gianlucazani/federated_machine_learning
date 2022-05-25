@@ -184,3 +184,40 @@ The client execution is structured as follows:
 
 ## Results and Examples
 
+In this section examples reuslts and comparison are explained. 
+
+### Comparison between clients with same settings
+
+By running a full training with no subsampling and Mini-Batch GD with batch size equal to 20, this is how the clients performed one against the other:
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170224648-4a410107-0b81-4a59-b19b-da0961963464.png" width="550px"/>
+</p>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170224948-64a8eada-8b27-43c4-8ebc-514a4621e5b9.png" width="550px"/>
+</p>
+
+While the overall accuracy and loss seen by the server at each round has the following behaviour:
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170225987-ab5bad63-b59f-4437-bd72-e3a9d038803f.png" width="550px"/>
+</p>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170226244-0a1a1907-5f46-47c3-a590-edd3f753f632.png" width="550px"/>
+</p>
+
+### Comparison between different batch sizes in Mini-Batch GD
+
+In this section we will be exploring how the different batch sizes perform over the communication round. The setting of the testing will not vary except the batch size, we will run the training with all five clients and no subsampling mode:
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170230575-66ced7a1-885b-4abf-9eea-8a4408217c0f.png" width="550px"/>
+</p>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/82953736/170230785-ceb35340-9df3-4a01-9c4a-8737e38da9cf.png" width="550px"/>
+</p>
+
+
