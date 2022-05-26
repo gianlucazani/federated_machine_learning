@@ -143,7 +143,7 @@ class Client:
         f_eval = open(f'evaluation_log_{self.id}.csv', "a+")
         writer = csv.writer(f_eval)
 
-        # START LISTENING FOR GLOBAL MODEL, EVALUATE IT, TRAIN IT, SEND BACK
+        # START LISTENING FOR GLOBAL MODEL, EVALUATE IT, TRAIN IT, EVALUATE AGAIN, SEND BACK
         while rounds_left > 0:
             try:
                 self.client_socket.listen()
