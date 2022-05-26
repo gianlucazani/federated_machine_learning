@@ -190,7 +190,7 @@ class Server:
         Runs the federated learning algorithm
         """
         for communication_round in range(self.communication_rounds):
-            print(f"Global Iteration: {communication_round}")
+            print(f"Global Iteration: {communication_round + 1}")
             print(f"Total number of clients: {len(self.clients)}")
 
             # SEND GLOBAL MODEL TO EACH CLIENT
