@@ -173,7 +173,7 @@ class Client:
                     self.set_parameters(global_model)
                     
                     # TEST GLOBAL MODEL ON LOCAL DATASET
-                    global_model_accuracy = self.test()
+                    global_model_accuracy = self.test()  # global model's accuracy on local testing data set
                     print(f'Global model accuracy tested on local data: {global_model_accuracy}')
 
                     # CALCULATE LOSS AND TRAIN
@@ -181,15 +181,15 @@ class Client:
                     print(f"Local training...")
                     print(f"Local training loss: {local_training_loss}")
                     # TEST THE MODEL
-                    local_model_testing_accuracy = self.test()
+                    local_model_testing_accuracy = self.test()  # newly trained model's accuracy on local test dataset
                     print(f"Local model testing accuracy: {local_model_testing_accuracy}")
 
                     # CREATE UPDATE PACKET TO SEND BACK TO SERVER
                     update_packet = {
-                        'model': self.model,
-                        'id': str(self.id),
-                        'local_training_loss': local_training_loss,
-                        'global_model_accuracy': global_model_accuracy
+                        'model': self.model,  # newly locally trained model
+                        'id': str(self.id),  # client id
+                        'local_training_loss': local_training_loss,  # local training loss on local training
+                        'global_model_accuracy': global_model_accuracy  # global model's accuracy on local data (before training)
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
@@ -264,10 +264,10 @@ class Client:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((HOST, self.server_port_no))
                 packet = {
-                    'id': str(self.id),
-                    'port_no': int(self.port_no),
-                    'data_size': self.X_train.shape[0],
-                    'model_sent': 0  # 0 for letting the server know that the client just joined. Used when discovering client failure
+                    'id': str(self.id),  # client id
+                    'port_no': int(self.port_no),  # client's port number
+                    'data_size': self.X_train.shape[0],  # client's data size
+                    'model_sent': 0  # 0 for letting the server know that the client just joined and never received a global model before. Used when discovering client failure
                 }
                 s.sendall(_pickle.dumps(packet))
         except socket.error as e:
