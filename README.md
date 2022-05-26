@@ -30,16 +30,7 @@ The implementation of the Federated Training satisfies all the assignment requir
     At the end of the training the server will print at terminal the overall average accuracy and average loss, as well as the overall training time
   </li>
   <li>
-    
-  </li>
-  <li>
-    
-  </li>
-  <li>
-    
-  </li>
-  <li>
-    [BONUS] Client failure is handled.
+    <b>[BONUS]</b> Client failure is handled.
   </li>
 </ul>
 
