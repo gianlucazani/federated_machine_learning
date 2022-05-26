@@ -29,18 +29,20 @@ def receive_model_from_client(server, _socket):
         received = receive_all(_socket)
         try:
             received_packet = _pickle.loads(received)
+
+            # UNPACK THE PACKET
             client_id = received_packet["id"]
             clients_model = received_packet["model"]
             local_training_loss = received_packet['local_training_loss']
             global_model_accuracy = received_packet['global_model_accuracy']
 
-            server.loss.append(local_training_loss)
-            server.accuracy.append(global_model_accuracy)
+            server.loss.append(local_training_loss) # add the loss to the server's loss history
+            server.accuracy.append(global_model_accuracy)  # add the accuracy to the server's accuracy history
 
-            server.round_losses.append(local_training_loss)
-            server.round_accuracies.append(global_model_accuracy)
+            server.round_losses.append(local_training_loss)  # add the loss the round losses
+            server.round_accuracies.append(global_model_accuracy) # add the accuracy to the rounf accuracies
 
-            server.clients_models[client_id] = clients_model
+            server.clients_models[client_id] = clients_model  # add the received model to the dictionary of received models at this round
 
 
         except Exception as e:
@@ -108,7 +110,7 @@ class HandshakeThread(threading.Thread):
             received = conn.recv(32768)
             client = _pickle.loads(received)
             print(f"Client connected: {client}")
-            self.server.clients.append(client)
+            self.server.clients.append(client)  # append the client to list of alive clients
 
 
 class Server:
