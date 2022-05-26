@@ -33,7 +33,7 @@ def receive_model_from_client(server, _socket):
             clients_model = received_packet["model"]
             local_training_loss = received_packet['local_training_loss']
             global_model_accuracy = received_packet['global_model_accuracy']
-            
+
             server.loss.append(local_training_loss)
             server.accuracy.append(global_model_accuracy)
 
@@ -132,18 +132,18 @@ class Server:
 
         self.communication_rounds = 100
 
-        self.round_losses = []
-        self.round_accuracies = []
+        self.round_losses = []  # will store the local training losses received from clients at each round, gets emptied after it is used for calculating the average
+        self.round_accuracies = []  # will store the global model accuracy among clients at each round, gets emptied after it is used for calculating the average
 
-        self.loss = []
-        self.accuracy = []
+        self.loss = []  # will store every local training loss sent by the client during the entire execution, used for computing final overall average
+        self.accuracy = []  # will store every global model accuracy sent by the client during the entire execution, used for computing final overall average
 
-        self.global_average_accuracy = -1
-        self.global_average_training_loss = -1
+        self.global_average_accuracy = -1  # will store the global average accuracy at each round. Init at -1 for init model
+        self.global_average_training_loss = -1  # will store the global average training loss at each round. Init at -1 for init model
 
-        with open("server_average_loss_accuracy.csv",'w+') as f:
+        with open("server_average_loss_accuracy.csv", 'w+') as f:
             writer = csv.writer(f)
-            writer.writerow(["communication_round","global_average_accuracy", "global_average_loss"])
+            writer.writerow(["communication_round", "global_average_accuracy", "global_average_loss"])
 
     def run(self):
         self.alive = True
@@ -167,16 +167,22 @@ class Server:
 
         # EVALUATE GLOBAL MODEL AT THE END OF THE TRAINING
         print("finished learning: evaluating model...")
-        average_loss = sum(self.loss)/len(self.loss)
-        average_accuracy = sum(self.accuracy)/len(self.accuracy)
+        average_loss = sum(self.loss) / len(self.loss)
+        average_accuracy = sum(self.accuracy) / len(self.accuracy)
         print(f"Average Loss is: {average_loss}")
         print(f"Average Accuracy is: {average_accuracy}")
-        with open("server_log.csv",'w+') as f:
+
+        # SAVE ALL THE LOSSES AND ACCURACIES COLLECTED DURING EXECUTION TO LOG FILE
+        with open("server_log.csv", 'w+') as f:
             writer = csv.writer(f)
             writer.writerow(["loss", "accuracy"])
             for loss, accuracy in zip(self.loss, self.accuracy):
                 writer.writerow([float(loss), accuracy])
+
+        # PRINT EXECUTION TIME
         print(f"Training time: {time.time() - start_time}")
+
+        # DIE
         self.alive = False
 
     def federated_learning(self):
@@ -226,6 +232,18 @@ class Server:
         If the self.check_received_all_models detected a possible failure, removes the actually failed clients from the alive clients list
         """
         for client in self.clients:
+            # IF
+            # the list of alive clients contains client ids that do not compare among the received models
+            # AND
+            # the clients corresponding to those ids have already sent a local model in the past
+            # THEN remove those clients from the list of alive clients
+
+            # the check client['model_sent'] == 1 is done because it may happen that a client joins the network while
+            # the server is waiting for all the models to be received. In this case, the self.check_received_all_models()
+            # will return True, because the new client is in the alive clients but has not sent a local model to the server
+            # (it never even received the global model for the first time!).
+            # By checking the model_sent attribute, we know if the client has already contributed to the training before (model_sent = 1)
+            # and so now is actually failed, or if it has just joined (model_sent = 0) and so it doesn't have to be removed from the list of alive clients
             if not self.clients_models.keys().__contains__(client["id"]) and client['model_sent'] == 1:
                 # client dead and will be removed from the clients list
                 print(f"------- CLIENT {client['id']} DIED --------")
@@ -262,17 +280,19 @@ class Server:
                 # PREPARE MODEL PACKAGE
 
                 package = {
-                    "model": self.model,
-                    "rounds_left": rounds_left,
-                    "global_average_accuracy": self.global_average_accuracy,
-                    "global_average_training_loss": self.global_average_training_loss
+                    "model": self.model,  # global model
+                    "rounds_left": rounds_left,  # let the clients know when to stop
+                    "global_average_accuracy": self.global_average_accuracy,  # send to clients so that they print it at terminal
+                    "global_average_training_loss": self.global_average_training_loss   # send to clients so that they print it at terminal
                 }
                 message = _pickle.dumps(package)
 
                 # SEND MODEL
                 _socket.connect((HOST, int(client["port_no"])))
                 _socket.sendall(message)
-                client['model_sent'] = 1
+                client['model_sent'] = 1  # sent model_sent to 1. Useful for understanding and handling client failure.
+                # model_Sent = 1 means that the client received already the global model (at least) for the first time
+                # and so if it doesn't send back the model, it is considered to be failed.
 
                 # START NEW THREAD THAT WILL HANDLE THE RECEIVING OF THE UPDATED MODEL FROM CLIENT client
                 updated_model_listener = threading.Thread(target=receive_model_from_client, args=(self, _socket))
@@ -297,27 +317,26 @@ class Server:
             if client_model:
                 for server_param, user_param in zip(self.model.parameters(), client_model.parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * client["data_size"] / total_size
-        
 
     def compute_global_averages(self):
         """
-        Computes the global average accuracy and the global average training loss. 
+        Computes the global average accuracy and the global average training loss at each communication round, then empties the two lists so they are ready for the next round.
         """
-        self.global_average_training_loss = sum(self.round_losses)/len(self.round_losses)
-        self.global_average_accuracy = sum(self.round_accuracies)/len(self.round_accuracies)
+        self.global_average_training_loss = sum(self.round_losses) / len(self.round_losses)
+        self.global_average_accuracy = sum(self.round_accuracies) / len(self.round_accuracies)
 
-        
         # SET THE ROUND LOSSES AND ACCURACIES TO AN EMPTY ARRAY
         self.round_losses = []
         self.round_accuracies = []
 
     def log_global_averages(self, communication_round):
         """
-        Logs global averages to a file
+        Logs global averages to a log file
         """
-        with open("server_average_loss_accuracy.csv",'a') as f:
+        with open("server_average_loss_accuracy.csv", 'a') as f:
             writer = csv.writer(f)
-            writer.writerow([communication_round, float(self.global_average_accuracy), float(self.global_average_training_loss)])
+            writer.writerow(
+                [communication_round, float(self.global_average_accuracy), float(self.global_average_training_loss)])
 
     def subsample_clients(self):
         """

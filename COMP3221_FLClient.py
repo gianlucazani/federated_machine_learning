@@ -155,11 +155,14 @@ class Client:
                     print(f'Receiving new global model')
                     received = receive_all(conn)
                     received_packet = _pickle.loads(received)
+
+                    # UNPACK RECEIVED PACKET
                     global_model = received_packet['model']
                     rounds_left = received_packet['rounds_left']
                     global_average_accuracy = received_packet['global_average_accuracy']
                     global_average_training_loss = received_packet['global_average_training_loss']
-                    
+
+                    # CHECK IF THIS IS THE INIT MODEL, SO NO STATISTICS TO PRINT AT TERMINAL
                     if global_average_accuracy > 0 and global_average_training_loss > 0:
                         print(f"Global Average Accuracy {global_average_accuracy}")
                         print(f"Global Average Training Loss {global_average_training_loss}")
@@ -181,7 +184,7 @@ class Client:
                     local_model_testing_accuracy = self.test()
                     print(f"Local model testing accuracy: {local_model_testing_accuracy}")
 
-                    # CREATE UPDATE PACK TO SEND BACK TO SERVER
+                    # CREATE UPDATE PACKET TO SEND BACK TO SERVER
                     update_packet = {
                         'model': self.model,
                         'id': str(self.id),
@@ -221,28 +224,29 @@ class Client:
 
     def train(self):
         """
-        Performs training of the model by running two epochs. The optimization will change depending on the optimization method chosen at start
-        :return: the loss of the model over the training set
+        Performs training of the model by running two epochs. The optimization method is Gradient Descent, the
+        dataset on which it is performed changes based on the setting at the program running
+        :return: Local training loss
         """
         self.model.train()
-        for epoch in range(2):
-            self.model.train()
-            if self.optimization_method == "0":
+        for epoch in range(2):  # run two epochs as per requirements
+            self.model.train()  # train model
+            if self.optimization_method == "0":  # decide if to use batched dataset or full
                 dataset_to_use = self.full_dataset
             else:
                 dataset_to_use = self.batched_dataset
-            for i, (X, y) in enumerate(dataset_to_use):
+            for i, (X, y) in enumerate(dataset_to_use):  # run Gradient Descent on the previously decided dataset
                 self.optimizer.zero_grad()
                 output = self.model(X)
                 loss = self.loss(output, y)
                 loss.backward()
                 self.optimizer.step()
-        return loss.data
+        return loss.data  # return the local training loss
 
     def test(self):
         """
         Tests the model over the client's test set
-        :return: the model accuracy on the testing set
+        :return: the model accuracy on the local testing set
         """
         self.model.eval()
         test_acc = 0
@@ -263,7 +267,7 @@ class Client:
                     'id': str(self.id),
                     'port_no': int(self.port_no),
                     'data_size': self.X_train.shape[0],
-                    'model_sent': 0
+                    'model_sent': 0  # 0 for letting the server know that the client just joined. Used when discovering client failure
                 }
                 s.sendall(_pickle.dumps(packet))
         except socket.error as e:
@@ -272,5 +276,5 @@ class Client:
             pass
 
 
-client = Client(20)
+client = Client(5)
 client.run()
