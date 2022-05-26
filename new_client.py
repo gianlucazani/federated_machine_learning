@@ -1,9 +1,10 @@
+import csv
+
 import torch
-import torch.nn as nn  # neural network
-import torch.nn.functional as F  # like the sigmoid, softmax, ...
+import torch.nn as nn
+import torch.nn.functional as F
 import os
 import json
-import copy
 from torch.utils.data import DataLoader
 import socket
 import _pickle
@@ -12,29 +13,19 @@ import sys
 HOST = "127.0.0.1"
 
 
-class MCLR(nn.Module):
-
-    def __init__(self):
-        super(MCLR, self).__init__()
-        # Create a linear transformation to the incoming data
-        # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
-        self.fc1 = nn.Linear(10, 2)
-        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
-
-    # Define how the model is going to be run, from input to output
-    def forward(self, x):
-        # Flattens input by reshaping it into a one-dimensional tensor.
-        x = torch.flatten(x, 1)
-        # Apply linear transformation
-        x = self.fc1(x)
-        # Apply a softmax followed by a logarithm
-        output = F.log_softmax(x, dim=1)
-        return output
+# -------------------------------------------------------------------------------------
+# -------------------------------------- METHODS --------------------------------------
+# -------------------------------------------------------------------------------------
 
 
-def get_data(id=""):
-    train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(id) + ".json")
-    test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(id) + ".json")
+def get_data(_id):
+    """
+    Retrieves data from the right file depending on the client id
+    :param _id: id of the client retrieving the data
+    :return: train and tests sets as tensors
+    """
+    train_path = os.path.join("FLdata", "train", "mnist_train_client" + str(_id) + ".json")
+    test_path = os.path.join("FLdata", "test", "mnist_test_client" + str(_id) + ".json")
     train_data = {}
     test_data = {}
 
@@ -73,6 +64,30 @@ def receive_all(sock):
     return data
 
 
+# -------------------------------------------------------------------------------------
+# -------------------------------------- CLASSES --------------------------------------
+# -------------------------------------------------------------------------------------
+
+class MCLR(nn.Module):
+
+    def __init__(self):
+        super(MCLR, self).__init__()
+        # Create a linear transformation to the incoming data
+        # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
+        self.fc1 = nn.Linear(784, 10)
+        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
+
+    # Define how the model is going to be run, from input to output
+    def forward(self, x):
+        # Flattens input by reshaping it into a one-dimensional tensor.
+        x = torch.flatten(x, 1)
+        # Apply linear transformation
+        x = self.fc1(x)
+        # Apply a softmax followed by a logarithm
+        output = F.log_softmax(x, dim=1)
+        return output
+
+
 class Client:
     def __init__(self, batch_size):
 
@@ -82,31 +97,53 @@ class Client:
 
         self.server_port_no = 6000  # fixed to 6000
 
-        # LOG FILE
+        # LOG FILES
         self.log_file = os.path.join("./", "client" + str(self.id) + "_log.txt")
+
         # clean file before starting
         with open(self.log_file, 'w') as f:
             f.write("")
-
+        with open(f'evaluation_log_{self.id}.csv', "w") as f_eval:
+            f_eval.write("")
+            writer = csv.writer(f_eval)
+            writer.writerow(["client_id", "communication_round", "local_training_loss", "local_model_testing_accuracy", "global_model_accuracy"])
+        
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = get_data(
             self.id)
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
         self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
-        self.trainloader = DataLoader(self.train_data,
-                                      batch_size)
+        self.full_dataset = DataLoader(self.train_data,
+                                       self.train_samples)
+        self.batched_dataset = DataLoader(self.train_data,
+                                          batch_size)
         self.testloader = DataLoader(self.test_data, self.test_samples)
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.bind((HOST, int(self.port_no)))
 
+        self.model = MCLR()
+        self.optimizer = torch.optim.SGD(self.model.parameters(),
+                                         lr=0.02)  # here the optimizer is set to be stochastic gradient descent
         self.loss = nn.NLLLoss()
 
     def set_parameters(self, model):
+        """
+        Updates the old model's parameters with the new one, which will be the global model sent by the server at each communication round
+        :param model: the new model
+        """
         for old_param, new_param in zip(self.model.parameters(), model.parameters()):
             old_param.data = new_param.data.clone()
 
     def run(self):
         rounds_left = 100
+
+        # SEND HANDSHAKE FOR CONNECTING TO SERVER
         self.handshake()
+
+        # WRITE HEADER IN THE EVALUATION FILE
+        f_eval = open(f'evaluation_log_{self.id}.csv', "a+")
+        writer = csv.writer(f_eval)
+
+        # START LISTENING FOR GLOBAL MODEL, EVALUATE IT, TRAIN IT, SEND BACK
         while rounds_left > 0:
             try:
                 self.client_socket.listen()
@@ -117,33 +154,61 @@ class Client:
                     conn, addr = self.client_socket.accept()
                     print(f'Receiving new global model')
                     received = receive_all(conn)
-                    received_global_model = _pickle.loads(received)
-                    # print(f"-- Received a packet with dimension: {sys.getsizeof(received)} --")
-                    W = received_global_model['W']
-                    print(W)
-                    self.model = W
-                    if rounds_left == 100:
-                        self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                                         lr=0.01)  # here the optimizer is set to be stochastic gradient descent
+                    received_packet = _pickle.loads(received)
+                    global_model = received_packet['model']
+                    rounds_left = received_packet['rounds_left']
+                    global_average_accuracy = received_packet['global_average_accuracy']
+                    global_average_training_loss = received_packet['global_average_training_loss']
+                    
+                    if global_average_accuracy > 0 and global_average_training_loss > 0:
+                        print(f"Global Average Accuracy {global_average_accuracy}")
+                        print(f"Global Average Training Loss {global_average_training_loss}")
+                    else: 
+                        print("Initial training round, no global accuracy or training loss")
 
-                    training_loss = self.train(2)
-                    testing_accuracy = self.test()
+                    # UPDATE CLIENT'S MODEL WITH THE GLOBAL ONE
+                    self.set_parameters(global_model)
+                    
+                    # TEST GLOBAL MODEL ON LOCAL DATASET
+                    global_model_accuracy = self.test()
+                    print(f'Global model accuracy tested on local data: {global_model_accuracy}')
+
+                    # CALCULATE LOSS AND TRAIN
+                    local_training_loss = self.train()
+                    print(f"Local training...")
+                    print(f"Local training loss: {local_training_loss}")
+                    # TEST THE MODEL
+                    local_model_testing_accuracy = self.test()
+                    print(f"Local model testing accuracy: {local_model_testing_accuracy}")
+
+                    # CREATE UPDATE PACK TO SEND BACK TO SERVER
                     updated_weights = {
-                        'W': self.model,
-                        'id': str(self.id)
+                        'model': self.model,
+                        'id': str(self.id),
+                        'local_training_loss': local_training_loss,
+                        'local_model_testing_accuracy': local_model_testing_accuracy
                     }
 
                     # SEND UPDATED MODEL BACK TO SERVER
-                    # print(f"-- Sending a packet with dimension: {sys.getsizeof(_pickle.dumps(updated_weights))} -- ")
+                    print("Sending back new global model")
                     conn.sendall(_pickle.dumps(updated_weights))
-                    rounds_left = received_global_model['rounds_left']
 
                     try:
+                        # WRITE TO LOG FILE
                         f.write(f'I am client {self.id} \n')
                         f.write(f'Receiving new global model \n')
-                        f.write(f'Training loss: {training_loss} \n')
-                        f.write(f'Testing accuracy: {testing_accuracy} \n')
+                        if global_average_accuracy > 0 and global_average_training_loss > 0:
+                            f.write(f"Global Average Accuracy {global_average_accuracy}\n")
+                            f.write(f"Global Average Training Loss {global_average_training_loss}\n")
+                        else: 
+                            f.write(f"Initial training round, no global accuracy or training loss\n")
+                        f.write(f'Global model accuracy tested on local data: {global_model_accuracy}\n')
                         f.write(f'Local training... \n')
+                        f.write(f'Local Training loss: {local_training_loss} \n')
+                        f.write(f'Local mmodel Testing accuracy: {local_model_testing_accuracy} \n')
+                        f.write(f'Sending back new global model\n')
+                        # WRITE TO EVALUATE LOG FILE
+                        writer.writerow([self.id, 100 - rounds_left, float(local_training_loss), local_model_testing_accuracy, global_model_accuracy])
                     except IOError as e:
                         print(f"Client {self.id} error writing to log file")
                         print(f"ERROR: {e}")
@@ -151,12 +216,22 @@ class Client:
                 print(f"Client {self.id} error while communicating with server")
                 print(f"ERROR: {e}")
                 continue
+        f_eval.flush()
+        f_eval.close()
 
-    def train(self, epochs):
+    def train(self):
+        """
+        Performs training of the model by running two epochs. The optimization will change depending on the optimization method chosen at start
+        :return: the loss of the model over the training set
+        """
         self.model.train()
-        for epoch in range(1, epochs + 1):
+        for epoch in range(2):
             self.model.train()
-            for i, (X, y) in enumerate(self.trainloader):
+            if self.optimization_method == "0":
+                dataset_to_use = self.full_dataset
+            else:
+                dataset_to_use = self.batched_dataset
+            for i, (X, y) in enumerate(dataset_to_use):
                 self.optimizer.zero_grad()
                 output = self.model(X)
                 loss = self.loss(output, y)
@@ -165,15 +240,21 @@ class Client:
         return loss.data
 
     def test(self):
+        """
+        Tests the model over the client's test set
+        :return: the model accuracy on the testing set
+        """
         self.model.eval()
         test_acc = 0
         for x, y in self.testloader:
             output = self.model(x)
             test_acc += (torch.sum(torch.argmax(output, dim=1) == y) * 1. / y.shape[0]).item()
-            print(str(self.id) + ", Accuracy of client ", self.id, " is: ", test_acc)
         return test_acc
 
     def handshake(self):
+        """
+        Sends handshake to the server
+        """
         try:
             print("Sending handshake")
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -181,7 +262,8 @@ class Client:
                 packet = {
                     'id': str(self.id),
                     'port_no': int(self.port_no),
-                    'data_size': self.X_train.shape[0]
+                    'data_size': self.X_train.shape[0],
+                    'model_sent': 0
                 }
                 s.sendall(_pickle.dumps(packet))
         except socket.error as e:
@@ -190,5 +272,5 @@ class Client:
             pass
 
 
-client = Client(5)
+client = Client(20)
 client.run()
