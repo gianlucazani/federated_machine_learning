@@ -162,6 +162,7 @@ class Client:
                     global_average_accuracy = received_packet['global_average_accuracy']
                     global_average_training_loss = received_packet['global_average_training_loss']
 
+                    print(f"Global Communication round: {100 - rounds_left}")
                     # CHECK IF THIS IS THE INIT MODEL, SO NO STATISTICS TO PRINT AT TERMINAL
                     if global_average_accuracy > 0 and global_average_training_loss > 0:
                         print(f"Global Average Accuracy {'{:.2f}'.format(round(global_average_accuracy * 100, 2))}%")
@@ -208,7 +209,7 @@ class Client:
                         f.write(f'Global model accuracy tested on local data: {global_model_accuracy}\n')
                         f.write(f'Local training... \n')
                         f.write(f'Local Training loss: {local_training_loss} \n')
-                        f.write(f'Local mmodel Testing accuracy: {local_model_testing_accuracy} \n')
+                        f.write(f'Local model Testing accuracy: {local_model_testing_accuracy} \n')
                         f.write(f'Sending back new global model\n')
                         # WRITE TO EVALUATE LOG FILE
                         writer.writerow([self.id, 100 - rounds_left, float(local_training_loss), local_model_testing_accuracy, global_model_accuracy])
