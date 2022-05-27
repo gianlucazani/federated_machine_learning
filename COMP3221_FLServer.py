@@ -81,7 +81,7 @@ class MCLR(nn.Module):
         # Create a linear transformation to the incoming data
         # Input dimension: 784 (28 x 28), Output dimension: 10 (10 classes)
         self.fc1 = nn.Linear(784, 10)
-        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01
+        self.fc1.weight.data = torch.randn(self.fc1.weight.size()) * .01  # generate random initial model
 
     # Define how the model is going to be run, from input to output
     def forward(self, x):
@@ -107,7 +107,7 @@ class HandshakeThread(threading.Thread):
         while server.alive:
             self.server.server_socket.listen()
             conn, addr = self.server.server_socket.accept()
-            received = conn.recv(32768)
+            received = conn.recv(4096)
             client = _pickle.loads(received)
             print(f"Client connected: {client}")
             self.server.clients.append(client)  # append the client to list of alive clients
