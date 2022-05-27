@@ -47,7 +47,7 @@ def receive_model_from_client(server, _socket):
 
 
         except Exception as e:
-            print(f"Exception is: {e}")
+            print(f"Client failed")
             pass
         _socket.close()
     except socket.error as e:
