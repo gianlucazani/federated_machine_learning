@@ -122,7 +122,7 @@ class Client:
 
         self.model = MCLR()
         self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                         lr=0.02)  # here the optimizer is set to be stochastic gradient descent
+                                         lr=0.01)  # here the optimizer is set to be stochastic gradient descent
         self.loss = nn.NLLLoss()
 
     def set_parameters(self, model):
@@ -164,8 +164,8 @@ class Client:
 
                     # CHECK IF THIS IS THE INIT MODEL, SO NO STATISTICS TO PRINT AT TERMINAL
                     if global_average_accuracy > 0 and global_average_training_loss > 0:
-                        print(f"Global Average Accuracy {global_average_accuracy}")
-                        print(f"Global Average Training Loss {global_average_training_loss}")
+                        print(f"Global Average Accuracy {'{:.2f}'.format(round(global_average_accuracy * 100, 2))}%")
+                        print(f"Global Average Training Loss {'{:.5f}'.format(round(float(global_average_training_loss), 5))}")
                     else: 
                         print("Initial training round, no global accuracy or training loss")
 
@@ -174,15 +174,15 @@ class Client:
                     
                     # TEST GLOBAL MODEL ON LOCAL DATASET
                     global_model_accuracy = self.test()  # global model's accuracy on local testing data set
-                    print(f'Global model accuracy tested on local data: {global_model_accuracy}')
+                    print(f"Global model accuracy tested on local data: {'{:.2f}'.format(round(global_model_accuracy * 100, 2))}%")
 
                     # CALCULATE LOSS AND TRAIN
                     local_training_loss = self.train()
                     print(f"Local training...")
-                    print(f"Local training loss: {local_training_loss}")
+                    print(f"Local training loss: {'{:.5f}'.format(round(float(local_training_loss), 5))}")
                     # TEST THE MODEL
                     local_model_testing_accuracy = self.test()  # newly trained model's accuracy on local test dataset
-                    print(f"Local model testing accuracy: {local_model_testing_accuracy}")
+                    print(f"Local model testing accuracy: {'{:.2f}'.format(round(local_model_testing_accuracy * 100, 2))}%")
 
                     # CREATE UPDATE PACKET TO SEND BACK TO SERVER
                     update_packet = {
@@ -276,5 +276,5 @@ class Client:
             pass
 
 
-client = Client(5)
+client = Client(10)
 client.run()

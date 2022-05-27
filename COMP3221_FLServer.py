@@ -143,9 +143,9 @@ class Server:
         self.global_average_accuracy = -1  # will store the global average accuracy at each round. Init at -1 for init model
         self.global_average_training_loss = -1  # will store the global average training loss at each round. Init at -1 for init model
 
-        with open("server_average_loss_accuracy.csv", 'w+') as f:
-            writer = csv.writer(f)
-            writer.writerow(["communication_round", "global_average_accuracy", "global_average_loss"])
+        # with open("server_average_loss_accuracy.csv", 'w+') as f:
+        #     writer = csv.writer(f)
+        #     writer.writerow(["communication_round", "global_average_accuracy", "global_average_loss"])
 
     def run(self):
         self.alive = True
@@ -174,15 +174,15 @@ class Server:
         print(f"Average Loss is: {average_loss}")
         print(f"Average Accuracy is: {average_accuracy}")
 
-        # SAVE ALL THE LOSSES AND ACCURACIES COLLECTED DURING EXECUTION TO LOG FILE
-        with open("server_log.csv", 'w+') as f:
-            writer = csv.writer(f)
-            writer.writerow(["loss", "accuracy"])
-            for loss, accuracy in zip(self.loss, self.accuracy):
-                writer.writerow([float(loss), accuracy])
-
-        # PRINT EXECUTION TIME
-        print(f"Training time: {time.time() - start_time}")
+        # # SAVE ALL THE LOSSES AND ACCURACIES COLLECTED DURING EXECUTION TO LOG FILE
+        # with open("server_log.csv", 'w+') as f:
+        #     writer = csv.writer(f)
+        #     writer.writerow(["loss", "accuracy"])
+        #     for loss, accuracy in zip(self.loss, self.accuracy):
+        #         writer.writerow([float(loss), accuracy])
+        #
+        # # PRINT EXECUTION TIME
+        # print(f"Training time: {time.time() - start_time}")
 
         # DIE
         self.alive = False
@@ -222,6 +222,8 @@ class Server:
 
             # COMPUTE GLOBAL AVERAGES
             self.compute_global_averages()
+            print(f"Global model average accuracy: {'{:.2f}'.format(round(self.global_average_accuracy * 100, 2))}%")
+            print(f"Local average training loss:v {'{:.5f}'.format(round(float(self.global_average_training_loss), 5))}")
 
             # LOG NEW GLOBAL AVERAGES
             self.log_global_averages(communication_round)
