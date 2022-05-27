@@ -9,26 +9,26 @@ The assignment topic is the realization of a Federated Training network where a 
 The implementation of the Federated Training satisfies all the assignment requirements:
 <ul>
   <li>
-    Server broadcasts the global model to each client, and all the clients will be training the model in parallel.
+    The server broadcasts the global model to each client, and all the clients will be training the model in parallel.
   </li>
   <li>
     Server prints at terminal information about the Federated Training that is taking place.
   </li>
   <li>
-    Each clients outputs at terminal information about loss and accuracy of the model.
+    Each client outputs at terminal information about the loss and accuracy of the model.
   </li>
   <li>
     Each client will write to a file the losses and accuracies for each communication round.
   </li>
   <li>
-    Server aggregates the models received by the clients based on the subsampling mode that has been chosen when starting the server: if subsamplin is active, only two out of the alive clients will be chosen for their models aggregation. Otherwise all of the alive clients will be choosen.
+    The server aggregates the models received by the clients based on the subsampling mode that has been chosen when starting the server: if subsampling is active, only two out of the alive clients will be chosen for their models' aggregation. Otherwise, all of the alive clients will be chosen.
   </li>
   <li>
     Clients can run the training both using standard Gradient Descent and Mini-Batch Gradient Descent.
   </li>
-    Each client can join the network at any moment during the execution of the training and will start contrinuting to it.
+    Each client can join the network at any moment during the execution of the training and will start contributing to it.
   <li>
-    At the end of the training the server will print at terminal the overall average accuracy and average loss, as well as the overall training time
+    At the end of the training, the server will print at terminal the overall average accuracy and average loss, as well as the overall training time
   </li>
   <li>
     <b>[BONUS]</b> Client failure is handled.
@@ -49,14 +49,14 @@ numpy 1.22.3
 ```
 ## Usage
 
-This section will explain how to use the program and see as the network behaviour satisfies requirements.
+This section will explain how to use the program and see how the network behaviour satisfies requirements.
 
 ### Starting the server
 As stated in the assignment sheet, the server is started by running the following shell command:
 ```
 python3 COMP3221_FLServer.py <Port-Server> <Sub-Client>
 ```
-Where ```Port-Server``` has to be ```6000``` by default and ```Sub-Client``` can be both ```0``` (all alive clients are selected for aggregation) or ```1``` (two out of the number of alive clients are selected for agregation).
+Where ```Port-Server``` has to be ```6000``` by default and ```Sub-Client``` can be both ```0``` (all alive clients are selected for aggregation) or ```1``` (two out of the number of alive clients are selected for aggregation).
 
 ### Starting a client
 
@@ -64,7 +64,7 @@ As stated in the assignment sheet, a client is started by running the following 
 ```
 python3 COMP3221_FLClient.py <Client-id> <Port-Client> <Opt-Method>
 ```
-Where ```Client-id``` should be an integer positve value, ```Opt-Method``` could be both ```0``` (for Gradient Descent) or ```1``` (for Mini-Batch Gradient Descent).
+Where ```Client-id``` should be an integer positive value, ```Opt-Method``` could be both ```0``` (for Gradient Descent) or ```1``` (for Mini-Batch Gradient Descent).
 
 ### Simulate client's failure
 
@@ -78,7 +78,7 @@ The graph below shows how the flow of execution achieves the requirements:
   <img src="https://user-images.githubusercontent.com/82953736/170196856-8c37f6de-2ee6-4b07-b5d8-151d2761045e.png" width="800px"/>
 </p>
 
-Where the meaning of the acronyms are:
+Where the meaning of the acronyms is:
 <ul>
   <li>
     <b>GAAn</b>: Global Average Accuracy of the n-th Model (or at (n - 1)-th round)
@@ -94,9 +94,9 @@ Where the meaning of the acronyms are:
   </li>
 </ul>
 
-Note that the shema above refers to an execution of two communication rounds with two clients. Moreover, the actions taken by the server and the clients are more than the ones written in the schema, which is a simplified and essential version of the program. 
+Note that the schema above refers to an execution of two communication rounds with two clients. Moreover, the actions taken by the server and the clients are more than the ones written in the schema, which is a simplified and essential version of the program.
 
-We will now explore more in depth how the execution works.
+We will now explore more in-depth how the execution works.
 
 ### Server's point of view
 
@@ -104,13 +104,13 @@ The server will execute in this way (in order):
 
 <ul>
   <li>
-    Generate initial random model (weights vector) at initialization
+    Generate the initial random model (weights vector) at initialization
   </li>
   <li>
     Waits for handshake from the first client
   </li>
   <li>
-    Once the first handshake is received, waits for 30 seconds for other handshakes before starting the federated training. Clients will be able to join the network at any time, because the server keeps listening for handskakes thanks to the HandshakeThread
+    Once the first handshake is received, waits for 30 seconds for other handshakes before starting the federated training. Clients will be able to join the network at any time, because the server keeps listening for handshakes thanks to the HandshakeThread
   </li>
   <li>
     After waiting the 30 seconds, the server will start the federated training
@@ -122,13 +122,13 @@ The server will execute in this way (in order):
         Wait for all the responses with updated models and statistics about the global model just sent
       </li>
       <li>
-        If some of the supposingly alive clients don't send the model, find out which died and remove it from the alive clients list
+        If some of the supposedly alive clients don't send the model, find out which died and remove it from the alive clients list
       </li>
       <li>
         Save clients' tested accuracies and losses, will be used both for calculating average accuracy and loss at each round and for calculating the         overall final average accuracy and loss when the training ends.
       </li>
       <li>
-        Aggregate selected clients' models with a weighted average, in this way the server generate the new global model
+        Aggregate selected clients' models with a weighted average, in this way the server generates the new global model
       </li>
       <li>
         Repeat the process until the communication rounds end
@@ -226,7 +226,7 @@ The client execution is structured as follows:
 #### Client's files
 
 During execution, all the clients will produce two files.<br>
-The first is called ```client<client-id>_log.txt``` and will store the the output of the client ```<client-id>``` during execution, the content of the file will be exactly the same as the output of the client at terminal. In this file you will find a descriptive sequence of action taken by the client, for example client 1 will write to its ```client1_log.txt``` something like:
+The first is called ```client<client-id>_log.txt``` and will store the output of the client ```<client-id>``` during execution, the content of the file will be exactly the same as the output of the client at terminal. In this file you will find a descriptive sequence of action taken by the client, for example client 1 will write to its ```client1_log.txt``` something like:
 ```
 I am client 1 
 Receiving new global model
@@ -275,7 +275,7 @@ client_id,communication_round,local_training_loss,local_model_testing_accuracy,g
 ```
 Where ```local_training_loss``` is the loss computed over the training of the received global model on the local data, ```local_model_testing_accuracy``` is the accuracy of the newly trained model on the local test data and ```global_model_accuracy``` is the accuracy of the received global model on the local test data before the training.
 
-The purpose of this file is to make it easier to evaluate the performance of the client after the training, see values as tables, plot values and similar oeprations. With the ```client<client-id>_log.txt``` such operation would be much more tricky and error prone.
+The purpose of this file is to make it easier to evaluate the performance of the client after the training, see values as tables, plot values and similar operations. With the ```client<client-id>_log.txt``` such operation would be much more tricky and error prone.
 
 #### Server's files
 
@@ -396,7 +396,7 @@ As you can see the client joins the network between communication round 29 and 3
 
 ## Analysis Results
 
-In this section examples reuslts and comparison are explained.
+In this section examples of results and comparisons are explained.
 
 ### Comparison between clients with same settings
 
