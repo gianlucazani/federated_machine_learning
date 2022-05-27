@@ -3,6 +3,7 @@
   <img src="https://user-images.githubusercontent.com/82953736/170199199-2f7854e2-7829-45c8-9321-0d2dd4635198.png" width="700px"/>
 </p>
 The assignment topic is the realization of a Federated Training network where a Server aggregates the models given by five Clients which train the global model on a subset of the original data. 
+
 ## Information
 
 The implementation of the Federated Training satisfies all the assignment requirements:
@@ -58,6 +59,7 @@ python3 COMP3221_FLServer.py <Port-Server> <Sub-Client>
 Where ```Port-Server``` has to be ```6000``` by default and ```Sub-Client``` can be both ```0``` (all alive clients are selected for aggregation) or ```1``` (two out of the number of alive clients are selected for agregation).
 
 ### Starting a client
+
 As stated in the assignment sheet, a client is started by running the following shell command:
 ```
 python3 COMP3221_FLClient.py <Client-id> <Port-Client> <Opt-Method>
