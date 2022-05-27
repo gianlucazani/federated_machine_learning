@@ -64,6 +64,10 @@ python3 COMP3221_FLClient.py <Client-id> <Port-Client> <Opt-Method>
 ```
 Where ```Client-id``` should be an integer positve value, ```Opt-Method``` could be both ```0``` (for Gradient Descent) or ```1``` (for Mini-Batch Gradient Descent).
 
+### Simulate client's failure
+
+To simulate client failure it is sufficient to kill the process of the client we want to make fail. This could be done with the ```ctrl+c``` command at terminal.
+
 ## Implementation
 
 The graph below shows how the flow of execution achieves the requirements:
@@ -215,7 +219,7 @@ The client execution is structured as follows:
   </li>
 </ul>
 
-### Files produces during execution
+### Files produced during execution
 
 #### Client's files
 
@@ -300,6 +304,93 @@ communication_round,global_average_accuracy,global_average_loss
 ```
 Where ```global_average_accuracies``` is the average of the clients' global model's accuracy on local test data and ```global_average_loss``` is the average of clients' local training loss.
 The purpose of this file is the evaluation of these averaged values over communication rounds.
+
+## Execution examples
+
+### Client's failure
+
+The client failure is handled by the server. In the following example all the five clients where alive before client 2 fails. This is what the server prints at terminal:
+
+```
+Global Iteration: 11
+Total number of clients: 5
+Broadcasting global model
+Getting local model from client: 2
+Getting local model from client: 1
+Getting local model from client: 3
+Getting local model from client: 4
+Getting local model from client: 5
+Global model average accuracy: 92.36%
+Local average training loss:v 0.00952
+Global Iteration: 12
+Total number of clients: 5
+Broadcasting global model
+Getting local model from client: 2
+Getting local model from client: 1
+Getting local model from client: 3
+Getting local model from client: 4
+Getting local model from client: 5
+------- CLIENT 1 DIED --------
+Global model average accuracy: 93.19%
+Local average training loss:v 0.00964
+Global Iteration: 13
+Total number of clients: 4
+Broadcasting global model
+Getting local model from client: 2
+Getting local model from client: 3
+Getting local model from client: 4
+Getting local model from client: 5
+Global model average accuracy: 93.61%
+Local average training loss:v 0.00883
+```
+The server detects the failure and after printing which client 1 has failed, will update the alive clients list.
+
+### Client joining later
+
+If a client joins later the network, it will start contributing to the model training for the remaining communication rounds. It is possible to see servers's and client's outputs below. In the example the client 1 will join the training after all the others clients joined:
+
+```
+# SERVER'S OUTPUT
+
+Global Iteration: 29
+Total number of clients: 4
+Broadcasting global model
+Getting local model from client: 2
+Getting local model from client: 3
+Getting local model from client: 4
+Getting local model from client: 5
+Client connected: {'id': '1', 'port_no': 6001, 'data_size': 4150, 'model_sent': 0}
+Global model average accuracy: 94.02%
+Local average training loss:v 0.00662
+Global Iteration: 30
+Total number of clients: 5
+Broadcasting global model
+Getting local model from client: 2
+Getting local model from client: 3
+Getting local model from client: 4
+Getting local model from client: 5
+Getting local model from client: 1
+Global model average accuracy: 81.81%
+Local average training loss:v 0.01046
+
+
+# CLIENT 1 OUTPUT
+
+Sending handshake
+I am client 1
+Receiving new global model
+Global Communication round: 30
+Global Average Accuracy 94.02%
+Global Average Training Loss 0.00662
+Global model accuracy tested on local data: 32.80%
+Local training...
+Local training loss: 0.01343
+Local model testing accuracy: 96.39%
+Sending back new global model
+```
+
+As you can see the client joins the network between communication round 29 and 30, and this is correctly handled both by server (which broadcasts the model to all the 5 clients) and by the client (which knows the communication round and receives the current global model). This is achieved thanks to the ```HeartbeatThread``` which keeps listening for handshakes while the training is taking place.
+
 
 ## Analysis Results
 
